@@ -1,48 +1,9 @@
-// "use client";
-
-// import { useGetAllCategories } from "../../Apis/category";
-
-// export default function AllCategoryList() {
-//   const { data, isLoading, isError } = useGetAllCategories();
-
-//   console.log(data)
-
-//   if (isLoading) return <p>Loading...</p>;
-//   if (isError) return <p>Something went wrong</p>;
-
-//   return (
-//     <div>
-//       <h1>Categories</h1>
-
-//       {data?.data?.map((category) => (
-//         <div key={category.id}>
-//           <img
-//             src={category.thumbnailImage}
-//             alt={category.title}
-//             width={100}
-//             height={100}
-//           />
-//           <h2>{category.title}</h2>
-//         </div>
-//       ))}
-//     </div>
-//   );
-// }
-
-
-
-
-
-
-
-
-
 
 
 "use client";
 
 import Link from "next/link";
-import { useGetAllCategories } from "../../Apis/category";
+import { useGetAllCategories } from "../../Apis/category/queries";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const PlusIcon = () => (

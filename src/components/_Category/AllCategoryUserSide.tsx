@@ -1,7 +1,7 @@
 "use client";
 
-import { useGetAllCategories } from "../../Apis/category";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useGetAllCategories } from "../../Apis/category/queries";
 
 interface Category {
   id: string | number;
