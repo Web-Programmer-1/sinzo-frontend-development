@@ -17,3 +17,4 @@ export const useGetSingleProduct = (slug: string) => {
     enabled: !!slug,
   });
 };
+

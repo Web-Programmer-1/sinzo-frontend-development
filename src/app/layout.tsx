@@ -23,13 +23,13 @@ export const metadata: Metadata = {
   creator: "shop business",
   publisher: "shop business",
   icons: {
-    icon: "/sinzo-logo.jpeg",
-    shortcut:"/sinzo-logo.jpeg",
-    apple:"/sinzo-logo.jpeg",
+    icon: "/banners/sinzo.jpg",
+    shortcut: "/banners/sinzo.jpg",
+    apple: "/banners/sinzo.jpg",
   },
   openGraph: {
-    title: "wood business",
-    description: "wood business. Advance wood business solution",
+    title: "Sinzo Shop BD",
+    description: "The e-commerce shopping platform in the bangladesh",
   },
 };
 

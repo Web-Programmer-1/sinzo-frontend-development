@@ -101,7 +101,7 @@ const NAV_ITEMS: NavItemType[] = [
   {
     icon: <Icon.Products />,
     label: "Products",
-    href: "/dashboard/products",
+    href: "/dashboard/product",
   },
   {
     icon: <Icon.Category />,

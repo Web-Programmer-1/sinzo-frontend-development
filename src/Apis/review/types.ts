@@ -55,6 +55,7 @@ export type TUpdateReviewPayload = {
 export type TAddReplyPayload = {
   action: "ADD_REPLY";
   message: string;
+  comment: string;
 };
 
 export type TReactReviewPayload = {
@@ -83,3 +84,21 @@ export type TDeleteReviewResponse = {
   message: string;
   data: null;
 };
+
+
+
+
+
+
+ export interface RelatedProduct {
+  id: string;
+  slug: string;
+  productCardImage: string;
+  title: string;
+  cardShortTitle?: string;
+  price: number;
+  badge: string | null;
+  stock: number;
+  averageRating: number;
+  totalReviews: number;
+}
