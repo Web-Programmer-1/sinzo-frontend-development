@@ -98,6 +98,15 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
       if (res?.success) {
         toast.success(res?.message || "Order placed successfully");
 
+
+       
+
+setTimeout(() => {
+  router.push("/userDashboard/order");
+}, 1000);
+
+
+
         reset({
           fullName: "",
           phone: "",

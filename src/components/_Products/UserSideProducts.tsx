@@ -1,16 +1,14 @@
 "use client";
 
 import { Suspense, useState, useRef, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import Link from "next/link";
 import { useGetAllCategories } from "../../Apis/category/queries";
 import { useGetAllProducts } from "../../Apis/products/queries";
 import Image from "next/image";
+import { Router } from "next/router";
 
-/* ══════════════════════════════════════════════════════
-   Export (Suspense wrap — useSearchParams এর জন্য জরুরি)
-══════════════════════════════════════════════════════ */
 export default function UserSideProducts() {
   return (
     <Suspense fallback={null}>
@@ -107,7 +105,11 @@ function ProductsPage() {
   };
 
   const { data: catData } = useGetAllCategories();
-  const { data: prodData, isLoading, isError } = useGetAllProducts(params as any);
+  const {
+    data: prodData,
+    isLoading,
+    isError,
+  } = useGetAllProducts(params as any);
 
   const categories: Category[] = catData?.data ?? [];
   const products: Product[] = (prodData?.data as Product[]) ?? [];
@@ -160,6 +162,7 @@ function ProductsPage() {
           map[k]?.(val);
           setPage(1);
         };
+
     return (
       <div style={F.body}>
         {/* Categories — desktop sidebar only */}
@@ -710,8 +713,16 @@ function CategorySlider({
 function ProductCard({ product, index }: { product: Product; index: number }) {
   const [hov, setHov] = useState(false);
   const soldOut = product.stock === 0;
+
+  const router = useRouter();
+
+  const handleNavigate = () => {
+    if (soldOut) return;
+    router.push(`/cart/my-cart`);
+  };
+
   return (
-    <Link href={`/product/${product.slug}`} className="pp-card">
+    <div className="pp-card">
       <div
         className="pp-card"
         style={{
@@ -764,6 +775,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           </div>
           <div style={C.actions}>
             <button
+            onClick={handleNavigate}
               style={{ ...C.buyBtn, opacity: soldOut ? 0.45 : 1 }}
               disabled={soldOut}
             >
@@ -791,7 +803,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

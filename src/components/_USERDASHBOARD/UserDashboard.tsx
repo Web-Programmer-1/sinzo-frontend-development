@@ -98,22 +98,11 @@ const NAV_ITEMS: NavItemType[] = [
     label: "Dashboard",
     href: "/dashboard",
   },
-{
-  icon: <Icon.Products />,
-  label: "Products",
-  dropdown: [
-    {
-      label: "Create Product",
-      icon: <Icon.Plus />,
-      href: "/dashboard/product/create",
-    },
-    {
-      label: "All Products List",
-      icon: <Icon.List />,
-      href: "/dashboard/product",
-    },
-  ],
-},
+  {
+    icon: <Icon.Orders />,
+    label: "My Orders",
+    href: "/userDashboard/order",
+  },
   {
     icon: <Icon.Category />,
     label: "Category",
@@ -308,7 +297,7 @@ interface TopbarProps {
 
 function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? "Dashboard";
+  const title = PAGE_TITLES[pathname] ?? "User Dashboard";
 
   return (
     <header className="h-16 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 shadow-sm">
@@ -338,7 +327,7 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
 }
 
 // ── Dashboard Layout ──────────────────────────────────────────────────────────
-export default function Dashboard({ children }: { children: React.ReactNode }) {
+export default function UserDashboard({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
