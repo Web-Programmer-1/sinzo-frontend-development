@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedRoutes = ["/profile", "/dashboard", "/admin"];
+const protectedRoutes = ["/profile", "/userDashboard"];
+const adminRoutes = ["/dashboard"];
 const guestRoutes = ["/login", "/register"];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const accessToken = request.cookies.get("accessToken")?.value;
@@ -11,12 +12,14 @@ export function proxy(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
-
+  const isAdminRoute = adminRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
   const isGuestRoute = guestRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
-  if (isProtectedRoute && !accessToken) {
+  if ((isProtectedRoute || isAdminRoute) && !accessToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -30,8 +33,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/profile/:path*",
+    "/userDashboard/:path*",
     "/dashboard/:path*",
-    "/admin/:path*",
     "/login",
     "/register",
   ],
