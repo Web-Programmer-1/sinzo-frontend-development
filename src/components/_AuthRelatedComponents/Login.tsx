@@ -176,22 +176,37 @@ export default function LoginForm() {
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    try {
-      const res = await loginMutation.mutateAsync(data);
+const onSubmit = async (data: LoginFormValues) => {
+  try {
+    const res = await loginMutation.mutateAsync(data);
 
-      if (res.success) {
-        toast.success(res.message || "Login successful");
-        reset();
+    if (res.success) {
+      toast.success(res.message || "Login successful");
+      reset();
+
+      // Cookie set হওয়ার জন্য একটু অপেক্ষা করো
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Role check করে redirect করো
+      const userRole = res?.data?.user?.role;
+
+      if (redirectPath && redirectPath !== "/") {
         router.push(redirectPath);
+      } else if (userRole === "ADMIN") {
+        router.push("/dashboard");
+      } else {
+        router.push("/");
       }
-    } catch (error) {
-      const err = error as AxiosError<TErrorResponse>;
-      toast.error(
-        err.response?.data?.message || "Login failed. Please try again."
-      );
+
+      router.refresh(); // middleware কে নতুন cookie দিয়ে recheck করাও
     }
-  };
+  } catch (error) {
+    const err = error as AxiosError<TErrorResponse>;
+    toast.error(
+      err.response?.data?.message || "Login failed. Please try again."
+    );
+  }
+};
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.08)] sm:p-8">
