@@ -29,12 +29,12 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // Token নেই → login এ redirect
+
   if ((isProtectedRoute || isAdminRoute) && !accessToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Admin route এ role check করো
+  // Admin route এ role check
   if (isAdminRoute && accessToken) {
     const payload = decodeJWT(accessToken);
     if (!payload || payload.role !== "ADMIN") {
@@ -42,8 +42,12 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Login/Register এ গেলে home এ redirect
+  // Login/Register এ token থাকলে → role দেখে redirect
   if (isGuestRoute && accessToken) {
+    const payload = decodeJWT(accessToken);
+    if (payload?.role === "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     return NextResponse.redirect(new URL("/", request.url));
   }
 
