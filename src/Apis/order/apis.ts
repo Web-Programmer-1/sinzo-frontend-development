@@ -122,3 +122,11 @@ export const getCustomerRanking = async (params?: TCustomerRankingParams) => {
   });
   return data;
 };
+
+
+
+
+export const deleteOrder = async (id: string) => {
+  const res = await apiClient.delete(ORDER_ENDPOINTS.DELETE_ORDER(id));
+  return res.data;
+}

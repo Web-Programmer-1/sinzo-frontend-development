@@ -1,9 +1,10 @@
 import React from 'react'
+import CreateCategoryForm from '../../../../../components/_Category/CreateCategory'
 
 export default function CreateCategoryPage() {
   return (
     <div>
-      <h1>This is Create Category </h1>
+      <CreateCategoryForm></CreateCategoryForm>
     </div>
   )
 }

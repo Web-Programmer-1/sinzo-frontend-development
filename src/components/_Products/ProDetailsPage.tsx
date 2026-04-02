@@ -14,7 +14,7 @@ import {
   useUpdateReview,
 } from "../../Apis/review";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAddToCart } from "../../Apis/cart";
 import { toast } from "sonner";
 
@@ -363,7 +363,9 @@ function ProductDetails({ product }: { product: ProductData }) {
                 {product.category.thumbnailImage ? (
                   <img src={product.category.thumbnailImage} alt="" />
                 ) : (
-                  <span>{product.category.title.charAt(0)}</span>
+                  <span className="font-semibold text-5xl">
+                    {product.category.title.charAt(0)}
+                  </span>
                 )}
               </div>
               <span className="pd-brand-name">{product.category.title}</span>
@@ -380,67 +382,90 @@ function ProductDetails({ product }: { product: ProductData }) {
 
             <div className="pd-divider" />
 
-                
-                      {product.sizes?.length > 0 && (
-                <div>
-                  <p className="mb-2 text-sm font-medium text-gray-700">
+            {product.sizes?.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-[15px] font-medium text-gray-700">
                     Size ({product.sizeType})
                   </p>
 
-                  <div className="flex flex-wrap gap-2">
-                    {product.sizes.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() =>
-                          setSelectedSize((prev) => (prev === s ? "" : s))
-                        }
-                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition ${
-                          selectedSize === s
-                            ? "bg-black text-white border-black"
-                            : "border-gray-300 hover:border-black"
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
+                  {(product.sizeGuideImage || product.sizeGuideData) && (
+                    <button
+                      type="button"
+                      onClick={() => setSizeGuideOpen(true)}
+                      className="group relative inline-flex items-center justify-center rounded-full p-[2px] shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] active:scale-95"
+                    >
+                      <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-black via-gray-300 to-white opacity-80 transition-opacity duration-300 group-hover:opacity-100"></span>
+
+                      <span className="relative flex items-center gap-2 rounded-full bg-gradient-to-b from-white to-gray-100 px-4 py-1.5 text-[13px] font-bold tracking-wide text-gray-800 transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                        <span className="transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-110">
+                          <span className="h-4 w-4 text-gray-700 group-hover:text-black">
+                            <RulerIcon />
+                          </span>
+                        </span>
+                        Size Guide
+                      </span>
+                    </button>
+                  )}
                 </div>
-              )}
 
-                            {/* COLOR */}
-              {product.colorVariants?.length > 0 && (
-                <div>
-                  <p className="mb-2 text-sm font-medium text-gray-700">
-                    Color
-                  </p>
-
-                  <div className="flex gap-3">
-                    {product.colorVariants.map((cv: any) => (
-                      <button
-                        key={cv.color}
-                        onClick={() => setSelectedColor(cv.color)}
-                        className={`h-8 w-8 rounded-full border-2 ${
-                          selectedColor === cv.color
-                            ? "border-black scale-105"
-                            : "border-gray-300"
-                        }`}
-                        style={{ background: cv.color.toLowerCase() }}
-                      />
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() =>
+                        setSelectedSize((prev) => (prev === s ? "" : s))
+                      }
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                        selectedSize === s
+                          ? "border-black bg-black text-white"
+                          : "border-gray-300 hover:border-black"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
+            {/* COLOR */}
+            {product.colorVariants?.length > 0 && (
+              <div>
+                <div className="mb-2 mt-2 flex items-center justify-between gap-3">
+                  <p className="text-[15px] font-medium text-gray-700">Color</p>
+                </div>
 
-            
+                <div className="flex items-center gap-3">
+                  {product.colorVariants.map((cv: any) => (
+                    <button
+                      key={cv.color}
+                      type="button"
+                      onClick={() => setSelectedColor(cv.color)}
+                      aria-label={cv.color}
+                      title={cv.color}
+                      className={`h-8 w-8 rounded-full border-2 transition ${
+                        selectedColor === cv.color
+                          ? "scale-105 border-black"
+                          : "border-gray-300"
+                      }`}
+                      style={{ background: cv.color.toLowerCase() }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="pd-cta-row"></div>
 
             <div className="pd-cta-row">
-              {/* <div className="pd-qty-wrap">
+              <div className="pd-qty-wrap">
                 <select
                   className="pd-qty-sel"
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}
-                  disabled={soldOut}
+                  disabled={soldOut || isPending}
                 >
                   {Array.from({ length: maxQty || 1 }, (_, i) => i + 1).map(
                     (n) => (
@@ -453,90 +478,31 @@ function ProductDetails({ product }: { product: ProductData }) {
                 <ChevronDownIcon />
               </div>
 
-              <button className="pd-cart-btn" disabled={soldOut}>
+              <button
+                className="pd-cart-btn"
+                disabled={soldOut || isPending}
+                onClick={handleAddToCart}
+              >
                 <CartIcon />
-                {soldOut ? "Out of Stock" : "Add to cart"}
-              </button> */}
-
-
-
-
-
-
-              
-
-
-            
-
-
-
-
-
-
-              
-
-
-              
-
-
-
+                {soldOut
+                  ? "Out of Stock"
+                  : isPending
+                    ? "Adding..."
+                    : "Add to cart"}
+              </button>
             </div>
 
-            
-
-
-            
-
-
-
-
-
-
-      <div className="pd-cta-row">
-  <div className="pd-qty-wrap">
-    <select
-      className="pd-qty-sel"
-      value={quantity}
-      onChange={(e) => setQuantity(Number(e.target.value))}
-      disabled={soldOut || isPending}
-    >
-      {Array.from({ length: maxQty || 1 }, (_, i) => i + 1).map((n) => (
-        <option key={n} value={n}>
-          {n}
-        </option>
-      ))}
-    </select>
-    <ChevronDownIcon />
-  </div>
-
-  <button
-    className="pd-cart-btn"
-    disabled={soldOut || isPending}
-    onClick={handleAddToCart}
-  >
-    <CartIcon />
-    {soldOut ? "Out of Stock" : isPending ? "Adding..." : "Add to cart"}
-  </button>
-</div>
-
-<button
-  className="pd-buy-btn"
-  disabled={soldOut || isPending}
-  onClick={handleBuyNow}
->
-  {soldOut ? "Unavailable" : isPending ? "Processing..." : "Buy it now"}
-</button>
-
-
-
-
-
-
-
-{/* 
-            <button className="pd-buy-btn" disabled={soldOut}>
-              {soldOut ? "Unavailable" : "Buy it now"}
-            </button> */}
+            <button
+              className="pd-buy-btn"
+              disabled={soldOut || isPending}
+              onClick={handleBuyNow}
+            >
+              {soldOut
+                ? "Unavailable"
+                : isPending
+                  ? "Processing..."
+                  : "Buy it now"}
+            </button>
 
             <div className="pd-delivery">
               <TruckIcon />
@@ -654,6 +620,9 @@ function ReviewsSection({
   productId: string;
   averageRating: number;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [sort, setSort] = useState<string | undefined>(undefined);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [newRating, setNewRating] = useState(5);
@@ -675,13 +644,34 @@ function ReviewsSection({
 
   const handleSubmitReview = () => {
     if (!newComment.trim()) return;
+
     createReview(
-      { productId, rating: newRating, comment: newComment.trim() },
+      {
+        productId,
+        rating: newRating,
+        comment: newComment.trim(),
+      },
       {
         onSuccess: () => {
           setNewComment("");
           setNewRating(5);
           setShowWriteForm(false);
+          toast.success("Review posted successfully");
+        },
+        onError: (error: any) => {
+          const statusCode =
+            error?.response?.status || error?.response?.data?.error?.statusCode;
+
+          const message =
+            error?.response?.data?.message || "Failed to post review";
+
+          if (statusCode === 401) {
+            toast.error("আগে login করুন, তারপর review দিন");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+          }
+
+          toast.error(message);
         },
       },
     );
@@ -712,6 +702,7 @@ function ReviewsSection({
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
+                type="button"
                 className={`rv-star-btn${n <= newRating ? " rv-star-btn--on" : ""}`}
                 onClick={() => setNewRating(n)}
                 aria-label={`${n} star`}
@@ -720,6 +711,7 @@ function ReviewsSection({
               </button>
             ))}
           </div>
+
           <textarea
             className="rv-write-ta"
             placeholder="Share your thoughts about this product…"
@@ -727,14 +719,18 @@ function ReviewsSection({
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
+
           <div className="rv-write-btns">
             <button
+              type="button"
               className="rv-cancel-btn"
               onClick={() => setShowWriteForm(false)}
             >
               Cancel
             </button>
+
             <button
+              type="button"
               className="rv-send-btn"
               onClick={handleSubmitReview}
               disabled={isCreating || !newComment.trim()}
@@ -766,7 +762,6 @@ function ReviewsSection({
     </div>
   );
 }
-
 /* ══════════════════════════════════════════════════════
    Review Card
 ══════════════════════════════════════════════════════ */
@@ -821,21 +816,6 @@ function ReviewCard({
     review.reactions.love +
     review.reactions.care +
     review.reactions.haha;
-
-  // const handleReply = () => {
-  //   if (!replyText.trim()) return;
-  //   addReply(
-  //     { reviewId: review.id, payload: { comment: replyText.trim() } },
-  //     {
-
-  //       onSuccess: () => {
-  //         setReplyText("");
-  //         setReplyOpen(false);
-  //         setShowReplies(true);
-  //       },
-  //     }
-  //   );
-  // };
 
   const handleReply = () => {
     if (!replyText.trim()) return;
@@ -1427,7 +1407,7 @@ const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  button { cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  button { cursor: pointer;  }
   a { text-decoration: none; color: inherit; }
   img { display: block; }
 
@@ -1570,7 +1550,7 @@ const CSS = `
 
 
   .pd-wrap {
-    font-family: 'DM Sans', sans-serif;
+    
     background: #f5f5f5;
     min-height: 100dvh;
     color: #1a1a1a;
@@ -1592,20 +1572,20 @@ const CSS = `
   .pd-thumb-img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
   .pd-badge { position: absolute; top: 10px; left: 10px; padding: 3px 9px; border-radius: 5px; font-size: 0.6rem; font-weight: 700; color: #fff; letter-spacing: 0.06em; text-transform: uppercase; z-index: 5; }
   .pd-sold-out { position: absolute; inset: 0; background: rgba(0,0,0,0.38); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.9rem; z-index: 5; }
-  .pd-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,255,255,0.9); color: #222; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.14); transition: background 0.15s, transform 0.15s; z-index: 10; }
+  .pd-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: none;  color: black; display: flex; align-items: center; justify-content: center;  transition: background 0.15s, transform 0.15s; z-index: 10; }
   .pd-arrow--prev { left: 10px; }
   .pd-arrow--next { right: 10px; }
   .pd-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
   .pd-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10; }
-  .pd-dot { width: 6px; height: 6px; border-radius: 50%; border: none; background: rgba(255,255,255,0.5); padding: 0; transition: background 0.18s, transform 0.18s; }
+  .pd-dot { width: 10px; height: 10px; border-radius: 50%; border: none; background: rgba(255,255,255,0.5); padding: 0; transition: background 0.18s, transform 0.18s; }
   .pd-dot--on { background: #fff; transform: scale(1.3); }
   .pd-info { padding: 20px 16px 24px; display: flex; flex-direction: column; background: #fff; }
   .pd-brand { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
   .pd-brand-icon { width: 24px; height: 24px; border-radius: 50%; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .pd-brand-icon img { width: 100%; height: 100%; object-fit: cover; }
-  .pd-brand-icon span { color: #fff; font-size: 0.58rem; font-weight: 700; }
+  .pd-brand-icon span { color: #fff; font-size: 20px; font-weight: 700; }
   .pd-brand-name { font-size: 0.8rem; font-weight: 600; color: #666; }
-  .pd-title { font-family: 'DM Serif Display', Georgia, serif; font-size: clamp(1.25rem, 5vw, 1.7rem); font-weight: 400; color: #111; line-height: 1.2; margin-bottom: 8px; }
+  .pd-title {  font-size: clamp(2rem, 5vw, 5rem); font-weight: 600; color: #111; line-height: 1.2; margin-bottom: 8px; }
   .pd-rating-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
   .pd-rating-count { font-size: 0.75rem; color: #999; }
   .pd-price { font-size: clamp(1.3rem, 5vw, 1.85rem); font-weight: 600; color: #111; letter-spacing: -0.02em; margin-bottom: 16px; }
@@ -1628,7 +1608,7 @@ const CSS = `
   .pd-size-chart-btn:active { transform: none; }
   .pd-cta-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
   .pd-qty-wrap { position: relative; display: flex; align-items: center; flex-shrink: 0; }
-  .pd-qty-sel { appearance: none; -webkit-appearance: none; width: 80px; height: 100%; min-height: 48px; padding: 0 30px 0 14px; border: 1.5px solid #ddd; border-radius: 8px; background: #fff; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #111; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.15s; }
+  .pd-qty-sel { appearance: none; -webkit-appearance: none; width: 80px; height: 100%; min-height: 48px; padding: 0 30px 0 14px; border: 1.5px solid #ddd; border-radius: 8px; background: #fff;  font-size: 0.9rem; color: #111; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.15s; }
   .pd-qty-sel:focus { border-color: #111; }
   .pd-qty-sel:disabled { opacity: 0.45; cursor: not-allowed; }
   .pd-qty-wrap > svg { position: absolute; right: 9px; pointer-events: none; color: #888; }
@@ -1640,13 +1620,13 @@ const CSS = `
   .pd-buy-btn:hover:not(:disabled) { background: #2a2a2a; transform: translateY(-1px); }
   .pd-buy-btn:active:not(:disabled) { transform: none; }
   .pd-buy-btn:disabled { opacity: 0.42; cursor: not-allowed; }
-  .pd-delivery { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; color: #666; padding-top: 4px; }
+  .pd-delivery { display: flex; align-items: center; gap: 7px; font-size: 0.90rem; font-weight: 500; color: #666; padding-top: 4px; }
   .pd-delivery svg { flex-shrink: 0; }
   .pd-section { background: #fff; padding: 20px 16px; margin-top: 8px; }
   .pd-sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-  .pd-sec-title { font-family: 'DM Serif Display', Georgia, serif; font-size: 1.1rem; color: #111; }
+  .pd-sec-title {font-size: 1.25rem; color: #111; font-weight: 700 }
   .rv-count { font-size: 0.78rem; color: #aaa; }
-  .pd-desc-txt { font-size: 0.84rem; line-height: 1.75; color: #555; white-space: pre-wrap; }
+  .pd-desc-txt { font-size: 0.90rem; line-height: 1.75; color: #555; white-space: pre-wrap; font-weight: 500 }
   .rv-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .rv-write-btn { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border: 1.5px solid #111; border-radius: 20px; background: #fff; color: #111; font-size: 0.76rem; font-weight: 600; transition: all 0.15s; }
   .rv-write-btn:hover { background: #111; color: #fff; }
@@ -1655,7 +1635,7 @@ const CSS = `
   .rv-star-picker { display: flex; gap: 4px; }
   .rv-star-btn { background: none; border: none; padding: 2px; transition: transform 0.12s; }
   .rv-star-btn:hover { transform: scale(1.18); }
-  .rv-write-ta { width: 100%; border: 1px solid #e0e0e0; border-radius: 9px; padding: 9px 11px; font-family: 'DM Sans', sans-serif; font-size: 0.84rem; resize: none; outline: none; background: #fff; transition: border-color 0.15s; }
+  .rv-write-ta { width: 100%; border: 1px solid #e0e0e0; border-radius: 9px; padding: 9px 11px;  font-size: 0.84rem; resize: none; outline: none; background: #fff; transition: border-color 0.15s; }
   .rv-write-ta:focus { border-color: #111; }
   .rv-write-btns { display: flex; gap: 8px; justify-content: flex-end; }
   .rv-edit-form { background: #f9f9f7; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
@@ -1689,7 +1669,7 @@ const CSS = `
   .rv-emoji-btn { font-size: 1.15rem; border: none; background: none; padding: 2px 3px; border-radius: 6px; transition: transform 0.12s; }
   .rv-emoji-btn:hover { transform: scale(1.3); }
   .rv-reply-box { margin-top: 10px; background: #f9f9f7; border-radius: 9px; padding: 10px; display: flex; flex-direction: column; gap: 7px; }
-  .rv-reply-ta { width: 100%; border: 1px solid #e0e0e0; border-radius: 7px; padding: 7px 9px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; resize: none; outline: none; background: #fff; }
+  .rv-reply-ta { width: 100%; border: 1px solid #e0e0e0; border-radius: 7px; padding: 7px 9px;  font-size: 0.8rem; resize: none; outline: none; background: #fff; }
   .rv-reply-ta:focus { border-color: #111; }
   .rv-reply-row { display: flex; gap: 6px; justify-content: flex-end; }
   .rv-reply-item { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #f0f0f0; }
@@ -1718,7 +1698,7 @@ const CSS = `
   .sg-bd { position: fixed; inset: 0; background: rgba(0,0,0,0.46); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; }
   .sg-sheet { background: #fff; width: 100%; max-width: 520px; border-radius: 18px 18px 0 0; max-height: 80vh; overflow-y: auto; }
   .sg-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid #f0f0f0; }
-  .sg-title { font-family: 'DM Serif Display', Georgia, serif; font-size: 0.95rem; color: #111; }
+  .sg-title { font-size: 0.95rem; color: #111; }
   .sg-close { background: none; border: none; font-size: 1rem; color: #888; cursor: pointer; }
   .sg-body { padding: 16px 18px 28px; display: flex; flex-direction: column; gap: 14px; }
   .sg-img { width: 100%; border-radius: 8px; }

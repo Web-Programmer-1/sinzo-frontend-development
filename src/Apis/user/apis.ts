@@ -62,3 +62,25 @@ export const getMeApi = async () => {
   const res = await apiClient.get<TApiResponse<TUser>>(userEndpoints.me);
   return res.data;
 };
+
+
+
+export const updateUserApi = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: FormData;
+}) => {
+  const res = await apiClient.patch(
+    userEndpoints.UPDATE_USER(id),
+    payload,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  return res.data;
+};

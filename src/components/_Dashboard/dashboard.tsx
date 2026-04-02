@@ -110,7 +110,7 @@ const NAV_ITEMS: NavItemType[] = [
     {
       label: "All Products List",
       icon: <Icon.List />,
-      href: "/dashboard/product",
+      href: "/dashboard/product/view-product",
     },
   ],
 },
@@ -125,8 +125,20 @@ const NAV_ITEMS: NavItemType[] = [
   {
     icon: <Icon.Orders />,
     label: "Orders",
-    href: "/dashboard/orders",
+    href: "/dashboard/order",
   },
+
+
+    {
+    icon: <Icon.List />,
+    label: "Steadfast",
+    dropdown: [
+      { label: "Create Steadfast",  icon: <Icon.Plus />, href: "/dashboard/steadfast/add" },
+      { label: "Steadfast List", icon: <Icon.List />, href: "/dashboard/steadfast/list" },
+    ],
+  },
+
+
   {
     icon: <Icon.Customers />,
     label: "Customers",
@@ -172,8 +184,8 @@ function NavItem({ item, collapsed, onClose }: NavItemProps) {
     : item.dropdown?.some((d) => pathname === d.href) ?? false;
 
   const base = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200";
-  const active = "bg-violet-600 text-white shadow-lg shadow-violet-200";
-  const inactive = "text-slate-500 hover:bg-slate-100 hover:text-slate-800";
+  const active = "bg-black text-white shadow-lg shadow-gray-400";
+  const inactive = "text-black hover:bg-slate-100 hover:text-slate-800";
 
   // Dropdown variant
   if (item.dropdown) {
@@ -204,7 +216,7 @@ function NavItem({ item, collapsed, onClose }: NavItemProps) {
                 onClick={onClose}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all
                   ${pathname === d.href
-                    ? "bg-violet-50 text-violet-700"
+                    ? "bg-gray-200 shadow-lg border-2 border-black/5 text-black"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
               >
@@ -249,7 +261,9 @@ function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
     >
       {/* Logo */}
       <div className={`flex items-center gap-2.5 h-16 px-4 border-b border-slate-100 flex-shrink-0 ${isCollapsed ? "justify-center" : ""}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br 
+        bg-black
+        flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
           M
         </div>
         {!isCollapsed && (
@@ -329,7 +343,8 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
           <Icon.Bell />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs cursor-pointer">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br 
+        bg-black flex items-center justify-center text-white font-bold text-xs cursor-pointer">
           A
         </div>
       </div>

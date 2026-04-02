@@ -48,32 +48,7 @@ export type TRelatedProduct = {
   totalReviews: number;
 };
 
-export type TSingleProduct = {
-  id: string;
-  title: string;
-  slug: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  badge?: TProductBadge | null;
-  productCardImage: string;
-  galleryImages: string[];
-  colors: string[];
-  sizes: string[];
-  sizeType?: string | null;
-  sizeGuideImage?: string | null;
-  sizeGuideData?: any;
-  averageRating: number;
-  totalReviews: number;
-  createdAt: string;
-  updatedAt: string;
-  category: {
-    id: string;
-    title: string;
-    thumbnailImage: string;
-  };
-  relatedProducts: TRelatedProduct[];
-};
+
 
 export type TProductsMeta = {
   page: number;
@@ -88,11 +63,7 @@ export type TProductsResponse = {
   data: TProduct[];
 };
 
-export type TSingleProductResponse = {
-  success: boolean;
-  message: string;
-  data: TSingleProduct;
-};
+
 
 export type TDeleteProductResponse = {
   success: boolean;

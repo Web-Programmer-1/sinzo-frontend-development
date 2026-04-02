@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -7,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { usePlaceOrder } from "../../Apis/order";
+import Image from "next/image";
 
 type TPaymentGateway = "BKASH" | "NOGOD";
 
@@ -14,11 +13,9 @@ type TPlaceOrderFormValues = {
   fullName: string;
   phone: string;
   email?: string;
-  country?: string;
-  city?: string;
-  area?: string;
+
   addressLine: string;
-  note?: string;
+
   deliveryArea: "INSIDE_CITY" | "OUTSIDE_CITY";
   paymentMethod: "CASH_ON_DELIVERY" | "ONLINE_PAYMENT";
 
@@ -36,7 +33,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
   const router = useRouter();
   const { mutateAsync, isPending } = usePlaceOrder();
   const [activeGateway, setActiveGateway] = useState<TPaymentGateway>(
-    defaultValues?.paymentGateway || "BKASH"
+    defaultValues?.paymentGateway || "BKASH",
   );
 
   const {
@@ -51,11 +48,8 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
       fullName: defaultValues?.fullName || "",
       phone: defaultValues?.phone || "",
       email: defaultValues?.email || "",
-      country: defaultValues?.country || "Bangladesh",
-      city: defaultValues?.city || "Dhaka",
-      area: defaultValues?.area || "",
+
       addressLine: defaultValues?.addressLine || "",
-      note: defaultValues?.note || "",
       deliveryArea: defaultValues?.deliveryArea || "INSIDE_CITY",
       paymentMethod: defaultValues?.paymentMethod || "CASH_ON_DELIVERY",
       paymentGateway: defaultValues?.paymentGateway || "BKASH",
@@ -78,11 +72,9 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
         fullName: values.fullName,
         phone: values.phone,
         email: values.email,
-        country: values.country,
-        city: values.city,
-        area: values.area,
+
         addressLine: values.addressLine,
-        note: values.note,
+
         deliveryArea: values.deliveryArea,
         paymentMethod: values.paymentMethod,
       };
@@ -98,24 +90,16 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
       if (res?.success) {
         toast.success(res?.message || "Order placed successfully");
 
-
-       
-
-setTimeout(() => {
-  router.push("/userDashboard/order");
-}, 1000);
-
-
+        setTimeout(() => {
+          router.push("/userDashboard/order");
+        }, 1000);
 
         reset({
           fullName: "",
           phone: "",
           email: "",
-          country: "Bangladesh",
-          city: "Dhaka",
-          area: "",
+
           addressLine: "",
-          note: "",
           deliveryArea: "INSIDE_CITY",
           paymentMethod: "CASH_ON_DELIVERY",
           paymentGateway: "BKASH",
@@ -131,7 +115,7 @@ setTimeout(() => {
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          "Something went wrong"
+          "Something went wrong",
       );
     }
   };
@@ -156,7 +140,10 @@ setTimeout(() => {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 md:px-8">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="px-6 py-6 md:px-8"
+            >
               {/* Contact Info */}
               <div className="mb-8">
                 <h3 className="mb-4 text-lg font-semibold text-black">
@@ -217,18 +204,6 @@ setTimeout(() => {
                       className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
                     />
                   </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-black">
-                      Country
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Bangladesh"
-                      {...register("country")}
-                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -239,30 +214,6 @@ setTimeout(() => {
                 </h3>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-black">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter city"
-                      {...register("city")}
-                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-black">
-                      Area
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter area"
-                      {...register("area")}
-                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
-                    />
-                  </div>
-
                   <div className="md:col-span-2">
                     <label className="mb-2 block text-sm font-medium text-black">
                       Full Address <span className="text-red-500">*</span>
@@ -281,18 +232,6 @@ setTimeout(() => {
                       </p>
                     )}
                   </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-black">
-                      Order Note
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Call me before delivery / special instruction..."
-                      {...register("note")}
-                      className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -309,7 +248,9 @@ setTimeout(() => {
                         <p className="text-sm font-medium text-black">
                           Inside Dhaka City
                         </p>
-                        <p className="text-xs text-gray-500">Delivery charge ৳80</p>
+                        <p className="text-xs text-gray-500">
+                          Delivery charge ৳80
+                        </p>
                       </div>
                       <input
                         type="radio"
@@ -326,7 +267,9 @@ setTimeout(() => {
                         <p className="text-sm font-medium text-black">
                           Outside Dhaka City
                         </p>
-                        <p className="text-xs text-gray-500">Delivery charge ৳140</p>
+                        <p className="text-xs text-gray-500">
+                          Delivery charge ৳140
+                        </p>
                       </div>
                       <input
                         type="radio"
@@ -395,8 +338,8 @@ setTimeout(() => {
                       Send Money Details
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Please complete your payment first, then provide the number
-                      and transaction ID below.
+                      Please complete your payment first, then provide the
+                      number and transaction ID below.
                     </p>
                   </div>
 
@@ -407,7 +350,13 @@ setTimeout(() => {
                     </p>
                     <div className="space-y-1.5 text-sm text-gray-600">
                       <p>1. Open your mobile banking app.</p>
-                      <p>2. Choose <span className="font-medium text-black">Send Money</span>.</p>
+                      <p>
+                        2. Choose{" "}
+                        <span className="font-medium text-black">
+                          Send Money
+                        </span>
+                        .
+                      </p>
                       <p>
                         3. Send the total amount to our{" "}
                         <span className="font-medium text-black">
@@ -416,35 +365,44 @@ setTimeout(() => {
                         number.
                       </p>
                       <p>4. After payment, copy the transaction ID.</p>
-                      <p>5. Enter your payment number and transaction ID below.</p>
+                      <p>
+                        5. Enter your payment number and transaction ID below.
+                      </p>
                     </div>
                   </div>
 
-                  {/* Tabs */}
                   <div className="mb-5 grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
+                    <div
                       onClick={() => handleGatewayChange("BKASH")}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                      className={`cursor-pointer overflow-hidden rounded-2xl transition ${
                         activeGateway === "BKASH"
-                          ? "border-black bg-black text-white"
-                          : "border-gray-200 bg-white text-black hover:border-black"
                       }`}
                     >
-                      bKash
-                    </button>
+                      <div className="relative h-[60px] w-full">
+                        <Image
+                          src="/bkash-logo.png"
+                          alt="bKash"
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                    </div>
 
-                    <button
-                      type="button"
+                    <div
                       onClick={() => handleGatewayChange("NOGOD")}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                      className={`cursor-pointer overflow-hidden rounded-2xl transition ${
                         activeGateway === "NOGOD"
-                          ? "border-black bg-black text-white"
-                          : "border-gray-200 bg-white text-black hover:border-black"
                       }`}
                     >
-                      Nagad
-                    </button>
+                      <div className="relative h-[60px] w-full">
+                        <Image
+                          src="/nogod-logo.png"
+                          alt="Nagad"
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <input
@@ -468,58 +426,99 @@ setTimeout(() => {
                       Send Money Number
                     </p>
                     <p className="mt-1 text-base font-semibold text-black">
-                      {activeGateway === "BKASH" ? "01XXXXXXXXX" : "01YYYYYYYYY"}
+                      {activeGateway === "BKASH"
+                        ? "01XXXXXXXXX"
+                        : "01YYYYYYYYY"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       Replace with your real merchant/personal number.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {/* Payment Number Input */}
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-black">
-                        Your Payment Number <span className="text-red-500">*</span>
+                      <label className="mb-2 block text-sm font-semibold text-gray-800">
+                        Your Payment Number{" "}
+                        <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        placeholder="01XXXXXXXXX"
-                        {...register("paymentNumber", {
-                          required: isOnlinePayment
-                            ? "Payment number is required"
-                            : false,
-                          minLength: isOnlinePayment
-                            ? {
-                                value: 11,
-                                message:
-                                  "Payment number must be at least 11 digits",
-                              }
-                            : undefined,
-                        })}
-                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="e.g. 017XXXXXXXX"
+                          {...register("paymentNumber", {
+                            required: isOnlinePayment
+                              ? "Payment number is required"
+                              : false,
+                            minLength: isOnlinePayment
+                              ? {
+                                  value: 11,
+                                  message:
+                                    "Payment number must be at least 11 digits",
+                                }
+                              : undefined,
+                          })}
+                          className={`w-full rounded-xl border px-4 py-3.5 text-sm font-medium outline-none transition-all placeholder:text-gray-400 shadow-sm ${
+                            errors.paymentNumber
+                              ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+                              : "border-gray-200 bg-white hover:border-gray-300 focus:border-black focus:ring-4 focus:ring-black/5"
+                          }`}
+                        />
+                      </div>
+                      {/* Error Message with Icon */}
                       {errors.paymentNumber && (
-                        <p className="mt-1 text-sm text-red-500">
+                        <p className="mt-1.5 flex items-center text-sm font-medium text-red-500">
+                          <svg
+                            className="mr-1.5 h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
                           {errors.paymentNumber.message}
                         </p>
                       )}
                     </div>
 
+                    {/* Transaction ID Input */}
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-black">
+                      <label className="mb-2 block text-sm font-semibold text-gray-800">
                         Transaction ID <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Enter transaction ID"
-                        {...register("transactionId", {
-                          required: isOnlinePayment
-                            ? "Transaction ID is required"
-                            : false,
-                        })}
-                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm uppercase outline-none transition focus:border-black"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="e.g. 9F8G7H6J5K"
+                          {...register("transactionId", {
+                            required: isOnlinePayment
+                              ? "Transaction ID is required"
+                              : false,
+                          })}
+                          className={`w-full rounded-xl border px-4 py-3.5 text-sm font-medium uppercase outline-none transition-all placeholder:text-gray-400 placeholder:normal-case shadow-sm ${
+                            errors.transactionId
+                              ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+                              : "border-gray-200 bg-white hover:border-gray-300 focus:border-black focus:ring-4 focus:ring-black/5"
+                          }`}
+                        />
+                      </div>
+                      {/* Error Message with Icon */}
                       {errors.transactionId && (
-                        <p className="mt-1 text-sm text-red-500">
+                        <p className="mt-1.5 flex items-center text-sm font-medium text-red-500">
+                          <svg
+                            className="mr-1.5 h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
                           {errors.transactionId.message}
                         </p>
                       )}
@@ -543,7 +542,9 @@ setTimeout(() => {
         <div className="lg:col-span-1">
           <div className="sticky top-6 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08)]">
             <div className="border-b border-black/10 px-6 py-5">
-              <h3 className="text-xl font-semibold text-black">Order Summary</h3>
+              <h3 className="text-xl font-semibold text-black">
+                Order Summary
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Delivery and payment overview
               </p>
@@ -555,7 +556,9 @@ setTimeout(() => {
                   Delivery Area
                 </p>
                 <p className="mt-1 text-sm font-semibold text-black">
-                  {deliveryArea === "INSIDE_CITY" ? "Inside City" : "Outside City"}
+                  {deliveryArea === "INSIDE_CITY"
+                    ? "Inside City"
+                    : "Outside City"}
                 </p>
               </div>
 

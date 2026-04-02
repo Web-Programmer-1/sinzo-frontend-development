@@ -176,7 +176,7 @@ export default function CartPage() {
   if (!items.length) {
     return (
       <section className="min-h-screen bg-[radial-gradient(circle_at_top,_#f5f5f5,_#ececec_45%,_#e6e6e6)] px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl ">
           <div className="rounded-[32px] border border-white/70 bg-white/65 p-8 text-center shadow-[0_16px_60px_rgba(0,0,0,0.08)] backdrop-blur-2xl sm:p-12">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-black/10 bg-black text-white shadow-lg">
               <ShoppingBag className="h-6 w-6" />
@@ -192,7 +192,7 @@ export default function CartPage() {
             </p>
 
             <Link
-              href="/products"
+              href="/"
               className="mt-8 inline-flex h-12 items-center justify-center rounded-full bg-black px-6 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-neutral-800"
             >
               Continue Shopping
@@ -221,7 +221,7 @@ export default function CartPage() {
           </div>
 
           <Link
-            href="/products"
+            href="/"
             className="inline-flex h-11 items-center justify-center rounded-full border border-white/70 bg-white/70 px-5 text-sm font-medium text-neutral-700 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:text-black"
           >
             Continue Shopping
@@ -245,7 +245,7 @@ export default function CartPage() {
                           src={item.product.productCardImage}
                           alt={item.product.title}
                           fill
-                          className="object-cover transition duration-500 group-hover:scale-105"
+                          className="object-contain transition duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 100vw, 160px"
                         />
                       ) : (
@@ -314,7 +314,7 @@ export default function CartPage() {
                           </div>
 
                           <div className="inline-flex items-center rounded-full border border-white/70 bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-md">
-                            Total: ৳{lineTotal.toLocaleString()}
+                            Total: {lineTotal.toLocaleString()}-BDT
                           </div>
                         </div>
 
@@ -387,7 +387,7 @@ export default function CartPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/70">Estimated Total</span>
                 <span className="text-2xl font-bold tracking-tight">
-                  ৳{summary?.subtotal?.toLocaleString() || 0}
+                  {summary?.subtotal?.toLocaleString() || 0} BDT
                 </span>
               </div>
             </div>

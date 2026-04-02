@@ -7,7 +7,7 @@ import SinzoFloatingContact from '../../components/floatContact/SinzoFloatingCon
 
 export default function UserLayout({children}:{children:React.ReactNode}) {
   return (
-    <div className='lg:max-w-6xl md:max-w-4xl mx-auto '>
+    <div className='lg:max-w-7xl md:max-w-4xl mx-auto '>
         <SinzoFloatingContact></SinzoFloatingContact>
         <Navbar></Navbar>
         {children}

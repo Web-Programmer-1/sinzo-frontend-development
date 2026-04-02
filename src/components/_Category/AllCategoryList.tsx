@@ -1,35 +1,48 @@
-
-
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
+import { useMemo, useState } from "react";
 import { useGetAllCategories } from "../../Apis/category/queries";
+import { useDeleteCategory } from "../../Apis/category/mutation";
+import Swal from "sweetalert2";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const PlusIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
   </svg>
 );
+
 const EditIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
   </svg>
 );
+
 const DeleteIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
   </svg>
 );
-const ViewIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-  </svg>
-);
+
 const EmptyIcon = () => (
-  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+  <svg className="w-9 h-9" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+  </svg>
+);
+
+const CategoryIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5l9-4 9 4M4.5 9.25v7.25L12 20.5l7.5-4V9.25M12 20.5v-8" />
   </svg>
 );
 
@@ -42,18 +55,21 @@ interface Category {
   productCount?: number;
 }
 
-// ── Skeleton Item ─────────────────────────────────────────────────────────────
+// ── Skeleton Card ─────────────────────────────────────────────────────────────
 function SkeletonItem() {
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-slate-100 animate-pulse">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-slate-100 flex-shrink-0" />
-        <div className="h-3.5 bg-slate-100 rounded-full w-28" />
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm animate-pulse">
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="h-4 w-40 rounded-full bg-slate-100 mb-3" />
+          <div className="h-3 w-24 rounded-full bg-slate-100" />
+        </div>
       </div>
-      <div className="flex gap-1.5">
-        <div className="w-7 h-7 bg-slate-100 rounded-lg" />
-        <div className="w-7 h-7 bg-slate-100 rounded-lg" />
-        <div className="w-7 h-7 bg-slate-100 rounded-lg" />
+
+      <div className="mt-5 flex gap-3">
+        <div className="h-11 flex-1 rounded-2xl bg-slate-100" />
+        <div className="h-11 flex-1 rounded-2xl bg-slate-100" />
       </div>
     </div>
   );
@@ -63,49 +79,91 @@ function SkeletonItem() {
 interface CategoryItemProps {
   category: Category;
   onDelete: (id: string | number) => void;
+  deletingId?: string | number | null;
 }
 
-function CategoryItem({ category, onDelete }: CategoryItemProps) {
+function CategoryItem({ category, onDelete, deletingId }: CategoryItemProps) {
+  const isDeleting = deletingId === category.id;
+
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-slate-100 hover:border-violet-100 hover:shadow-sm transition-all group">
+    <div className="group rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Left */}
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+            <img
+              src={category.thumbnailImage || "/placeholder.png"}
+              alt={category.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
 
-      {/* Left: image + title */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-100">
-          <img
-            src={category.thumbnailImage}
-            alt={category.title}
-            className="w-full h-full object-cover"
-          />
+          <div className="min-w-0">
+            <h3 className="truncate text-base sm:text-lg font-bold text-slate-800">
+              {category.title}
+            </h3>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+   
+
+              {typeof category.productCount === "number" && (
+                <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                  {category.productCount} Products
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <span className="text-sm font-medium text-slate-700 truncate">{category.title}</span>
-      </div>
 
-      {/* Right: actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
-        <Link
-          href={`/dashboard/category/${category.id}`}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-violet-50 hover:text-violet-600 transition-all"
-          title="View"
-        >
-          <ViewIcon />
-        </Link>
-        <Link
-          href={`/dashboard/category/${category.id}/edit`}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-500 transition-all"
-          title="Edit"
-        >
-          <EditIcon />
-        </Link>
-        <button
-          onClick={() => onDelete(category.id)}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
-          title="Delete"
-        >
-          <DeleteIcon />
-        </button>
-      </div>
+        {/* Right */}
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:justify-end sm:w-auto w-full">
+          <Link
+            href={`/dashboard/category/category-list/${category.id}`}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+          >
+            <EditIcon />
+            Edit
+          </Link>
 
+          <button
+            type="button"
+            onClick={() => onDelete(category.id)}
+            disabled={isDeleting}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isDeleting ? (
+              <>
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeOpacity="0.25"
+                    strokeWidth="4"
+                  />
+                  <path
+                    d="M22 12a10 10 0 00-10-10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Deleting...
+              </>
+            ) : (
+              <>
+                <DeleteIcon />
+                Delete
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -113,15 +171,19 @@ function CategoryItem({ category, onDelete }: CategoryItemProps) {
 // ── Empty State ───────────────────────────────────────────────────────────────
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-slate-300">
-      <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mb-3">
+    <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
         <EmptyIcon />
       </div>
-      <p className="text-sm font-semibold text-slate-500">No categories yet</p>
-      <p className="text-xs text-slate-400 mt-1 mb-4">Create your first category.</p>
+
+      <h3 className="text-lg font-bold text-slate-700">No categories found</h3>
+      <p className="mt-2 text-sm text-slate-500">
+        Start by creating your first category for the store.
+      </p>
+
       <Link
         href="/dashboard/category/create"
-        className="inline-flex items-center gap-1.5 bg-violet-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-violet-700 transition"
+        className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
       >
         <PlusIcon />
         Create Category
@@ -133,57 +195,96 @@ function EmptyState() {
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AllCategoryList() {
   const { data, isLoading, isError } = useGetAllCategories();
+  const { mutateAsync: deleteCategory, isPending: isDeletePending } = useDeleteCategory();
 
-  const categories: Category[] = data?.data ?? [];
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
 
-  const handleDelete = (id: string | number) => {
-    // TODO: connect delete API
-    console.log("Delete:", id);
-  };
+  const categories: Category[] = useMemo(() => {
+    return data?.data ?? [];
+  }, [data]);
+
+const handleDelete = async (id: string | number) => {
+  const result = await Swal.fire({
+    title: "Are you sure?",
+    text: "This category will be permanently deleted!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#ef4444",
+    cancelButtonColor: "#64748b",
+    confirmButtonText: "Yes, delete it!",
+    cancelButtonText: "Cancel",
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    setDeletingId(id);
+
+    const res = await deleteCategory(String(id));
+
+    // ✅ Sonner success toast
+    toast.success(res?.message || "Category deleted successfully");
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Failed to delete category";
+
+    // ❌ Sonner error toast
+    toast.error(errorMessage);
+  } finally {
+    setDeletingId(null);
+  }
+};
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800">
+              All Categories
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {isLoading ? "Loading categories..." : `${categories.length} categories available`}
+            </p>
+          </div>
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-slate-800">All Categories</h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {isLoading ? "Loading..." : `${categories.length} categories`}
-          </p>
+          <Link
+            href="/dashboard/category/create"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            <PlusIcon />
+            Create Category
+          </Link>
         </div>
-        <Link
-          href="/dashboard/category/create"
-          className="inline-flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:opacity-90 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-md shadow-violet-200 whitespace-nowrap"
-        >
-          <PlusIcon />
-          Create Category
-        </Link>
       </div>
 
-      {/* ── Error ── */}
+      {/* Error */}
       {isError && (
-        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 text-xs text-red-600 font-medium">
-          ⚠ Something went wrong. Please refresh.
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+          Something went wrong. Please refresh and try again.
         </div>
       )}
 
-      {/* ── List ── */}
-      <div className="space-y-2">
-        {isLoading
-          ? Array.from({ length: 6 }).map((_, i) => <SkeletonItem key={i} />)
-          : categories.length === 0
-          ? <EmptyState />
-          : categories.map((category) => (
-              <CategoryItem
-                key={category.id}
-                category={category}
-                onDelete={handleDelete}
-              />
-            ))
-        }
+      {/* List */}
+      <div className="grid grid-cols-1 gap-4">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => <SkeletonItem key={i} />)
+        ) : categories.length === 0 ? (
+          <EmptyState />
+        ) : (
+          categories.map((category) => (
+            <CategoryItem
+              key={category.id}
+              category={category}
+              onDelete={handleDelete}
+              deletingId={deletingId}
+            />
+          ))
+        )}
       </div>
-
     </div>
   );
 }

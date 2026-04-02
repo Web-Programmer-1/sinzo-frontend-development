@@ -1,10 +1,10 @@
-import React from 'react'
-import CreateProductForm from '../../../../components/_Products/CreateProducts'
+import AllOrders from "../../../../components/_ORDER_MANAGEMENT/AllOrdersList";
+
 
 export default function ProductPage() {
   return (
     <div>
-      <CreateProductForm></CreateProductForm>
+      <AllOrders></AllOrders>
     </div>
   )
 }

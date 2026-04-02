@@ -8,6 +8,8 @@ const ORDER_ENDPOINTS = {
   UPDATE_ORDER_STATUS: (id: string) => `/order/${id}/status`,
   UPDATE_PAYMENT_STATUS: (id: string) => `/order/payment-status/${id}`,
   CUSTOMER_RANKING: "/order/customer-ranking",
+
+  DELETE_ORDER: (id: string) => `/order/${id}`,
 };
 
 export default ORDER_ENDPOINTS;

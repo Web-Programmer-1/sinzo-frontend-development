@@ -4,7 +4,7 @@ import PlaceOrderForm from '../../../../components/_CartManagemenets/OrderPlaceF
 
 export default function MyCartPage() {
   return (
-    <div>
+    <div className='lg:container mx-auto px-4 py-16'>
       <MyCart></MyCart>
       <PlaceOrderForm></PlaceOrderForm>
     </div>

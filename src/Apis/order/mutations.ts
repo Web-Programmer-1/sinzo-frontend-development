@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  deleteOrder,
   placeOrder,
   updateOrderStatus,
   updatePaymentStatus,
@@ -49,6 +50,27 @@ export const useUpdatePaymentStatus = () => {
         }),
         queryClient.invalidateQueries({
           queryKey: orderKeys.adminOrderById(variables.id),
+        }),
+      ]);
+    },
+  });
+};
+
+
+
+
+export const useDeleteOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteOrder(id),
+    onSuccess: async (_, id) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.adminOrders(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.adminOrderById(id),
         }),
       ]);
     },

@@ -5,7 +5,7 @@ import {
   TDeleteProductResponse,
   TGetProductsParams,
   TProductsResponse,
-  TSingleProductResponse,
+
 } from "./types";
 
 export const getAllProducts = async (
@@ -17,14 +17,14 @@ export const getAllProducts = async (
 
 export const getSingleProduct = async (
   slug: string
-): Promise<TSingleProductResponse> => {
+) => {
   const res = await apiClient.get(productEndpoints.getBySlug(slug));
   return res.data;
 };
 
 export const createProduct = async (
   payload: FormData
-): Promise<TSingleProductResponse> => {
+) => {
   const res = await apiClient.post(productEndpoints.create, payload, {
     headers: {
       "Content-Type": "multipart/form-data",
@@ -42,7 +42,7 @@ export const updateProduct = async ({
 }: {
   id: string;
   payload: FormData;
-}): Promise<TSingleProductResponse> => {
+}) => {
   const res = await apiClient.patch(productEndpoints.update(id), payload, {
     headers: {
       "Content-Type": "multipart/form-data",

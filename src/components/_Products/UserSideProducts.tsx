@@ -3,11 +3,13 @@
 import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import Link from "next/link";
+
 import { useGetAllCategories } from "../../Apis/category/queries";
 import { useGetAllProducts } from "../../Apis/products/queries";
 import Image from "next/image";
-import { Router } from "next/router";
+import { useAddToCart, useGetMyCart } from "../../Apis/cart";
+import MiniCartDrawer from "./MiniCartDrawer";
+import { toast } from "sonner";
 
 export default function UserSideProducts() {
   return (
@@ -84,6 +86,16 @@ function ProductsPage() {
   const [categoryId, setCategoryId] = useState(
     searchParams.get("categoryId") || "",
   );
+
+
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
+const { data: cartData, refetch: refetchCart } = useGetMyCart();
+
+const cartItems = cartData?.data?.items || [];
+const cartSummary = cartData?.data?.summary;
+
+
   const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
   const [size, setSize] = useState(searchParams.get("size") || "");
@@ -262,9 +274,23 @@ function ProductsPage() {
         <button style={F.clearBtn} onClick={clearAll}>
           Clear All
         </button>
+
+
+
+
+
+
+
       </div>
     );
+
+
+    
   };
+
+
+
+
 
   return (
     <>
@@ -394,9 +420,17 @@ function ProductsPage() {
             </EmptyState>
           ) : (
             <div className="pp-grid">
-              {products.map((p, i) => (
-                <ProductCard key={p.id} product={p} index={i} />
-              ))}
+          {products.map((p, i) => (
+  <ProductCard
+    key={p.id}
+    product={p}
+    index={i}
+    onAddedToCart={async () => {
+      await refetchCart();
+      setCartDrawerOpen(true);
+    }}
+  />
+))}
             </div>
           )}
 
@@ -451,8 +485,36 @@ function ProductsPage() {
           </div>
         </div>
       )}
+
+
+
+            {drawerOpen && (
+        <div style={T.backdrop} onClick={() => setDrawerOpen(false)}>
+          <div style={T.drawer} onClick={(e) => e.stopPropagation()}>
+            <div style={T.drawerHead}>
+              <p style={F.sidebarTitle}>Filters</p>
+              <button style={T.drawerX} onClick={() => setDrawerOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1, padding: "0 18px 24px" }}>
+              <FilterBody isDraft={true} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <MiniCartDrawer
+        open={cartDrawerOpen}
+        onClose={() => setCartDrawerOpen(false)}
+        items={cartItems}
+        summary={cartSummary}
+      />
     </>
   );
+
+
+
 }
 
 /* ══════════════════════════════════════════════════════
@@ -710,19 +772,55 @@ function CategorySlider({
 /* ══════════════════════════════════════════════════════
    Product Card
 ══════════════════════════════════════════════════════ */
-function ProductCard({ product, index }: { product: Product; index: number }) {
+function ProductCard({
+  product,
+  index,
+  onAddedToCart,
+}: {
+  product: Product;
+  index: number;
+  onAddedToCart: () => void | Promise<void>;
+}) {
   const [hov, setHov] = useState(false);
   const soldOut = product.stock === 0;
 
   const router = useRouter();
+  const { mutate: addToCart, isPending } = useAddToCart();
 
-  const handleNavigate = () => {
+  const handleDetailsNavigate = () => {
+    router.push(`/product/${product.slug}`);
+  };
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (soldOut) return;
-    router.push(`/cart/my-cart`);
+    router.push(`/product/${product.slug}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (soldOut || isPending) return;
+
+    addToCart(
+      {
+        productId: product.id,
+        quantity: 1,
+      },
+      {
+        onSuccess: async (res: any) => {
+          toast.success(res?.message || "Added to cart");
+          await onAddedToCart();
+        },
+        onError: (err: any) => {
+          toast.error(err?.response?.data?.message || "Failed to add to cart");
+        },
+      }
+    );
   };
 
   return (
-    <div className="pp-card">
+    <div className="pp-card" onClick={handleDetailsNavigate}>
       <div
         className="pp-card"
         style={{
@@ -737,11 +835,16 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       >
         <div style={C.imgWrap}>
           {product.productCardImage ? (
-            <img
+            <Image
               src={product.productCardImage}
               alt={product.title}
-              draggable={false}
-              style={{ ...C.img, transform: hov ? "scale(1.06)" : "scale(1)" }}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              style={{
+                ...C.img,
+                objectFit: "cover",
+                transform: hov ? "scale(1.06)" : "scale(1)",
+              }}
             />
           ) : (
             <div style={C.imgFallback}>
@@ -762,20 +865,23 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 
           {soldOut && <div style={C.dimOverlay} />}
         </div>
+
         <div style={C.info}>
           <p style={C.title}>{product.title}</p>
           <span style={C.catTag}>
             {product.cardShortTitle?.slice(0, 28)}...
           </span>
+
           <div style={C.priceRow}>
             <span style={C.price}>৳ {product.price.toLocaleString()}</span>
             {product.totalReviews > 0 && (
               <span style={C.reviews}>★ {product.totalReviews}</span>
             )}
           </div>
+
           <div style={C.actions}>
             <button
-            onClick={handleNavigate}
+              onClick={handleBuyNow}
               style={{ ...C.buyBtn, opacity: soldOut ? 0.45 : 1 }}
               disabled={soldOut}
             >
@@ -783,22 +889,27 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             </button>
 
             <button
+              onClick={handleAddToCart}
               style={{ ...C.cartIconBtn, opacity: soldOut ? 0.45 : 1 }}
-              disabled={soldOut}
+              disabled={soldOut || isPending}
               aria-label="Add to Cart"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-              >
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-              </svg>
+              {isPending ? (
+                "..."
+              ) : (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <circle cx="9" cy="21" r="1" />
+                  <circle cx="20" cy="21" r="1" />
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
