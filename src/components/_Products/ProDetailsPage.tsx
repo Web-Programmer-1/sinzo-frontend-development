@@ -161,6 +161,8 @@ export default function ProductDetailsPage({ slug }: { slug: string }) {
    Main Component
 ══════════════════════════════════════════════════════ */
 function ProductDetails({ product }: { product: ProductData }) {
+
+
   const colorVariants: ColorVariant[] =
     (product.colorVariants as ColorVariant[]) || [];
   const defaultImages = [
@@ -213,6 +215,8 @@ function ProductDetails({ product }: { product: ProductData }) {
       {
         onSuccess: (res: any) => {
           toast.success(res?.message || "Added to cart");
+          router.push("/cart/my-cart");
+
         },
         onError: (err: any) => {
           toast.error(err?.response?.data?.message || "Failed to add cart");

@@ -1,5 +1,5 @@
-export * from "./apis";
-export * from "./endpoints";
-export * from "./keys";
-export * from "./queries";
-export * from "./mutations";
+export const userKeys = {
+  all: ["users"] as const,
+  detail: (id: string) => ["users", id] as const,
+  me: ["me"] as const,
+};

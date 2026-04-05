@@ -5,8 +5,9 @@
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import { useRegisterMutation } from "../../Apis/user/mutations";
+
 import { useRouter } from "next/navigation";
+import { useRegisterUser } from "../../Apis/user/mutations";
 
 type RegisterFormValues = {
   name: string;
@@ -19,7 +20,7 @@ type TErrorResponse = {
 };
 
 export default function RegisterForm() {
-  const registerMutation = useRegisterMutation();
+  const registerMutation = useRegisterUser();
   const router = useRouter();
   const {
     register,
@@ -38,11 +39,11 @@ export default function RegisterForm() {
     try {
       const res = await registerMutation.mutateAsync(data);
 
-     if(res.success){
+     if(res.data?.success ) {
        router.push("/login");
      }
 
-      toast.success(res.message || "Registration successful");
+      toast.success(res.data?.message || "Registration successful");
       reset();
     } catch (error) {
       const err = error as AxiosError<TErrorResponse>;

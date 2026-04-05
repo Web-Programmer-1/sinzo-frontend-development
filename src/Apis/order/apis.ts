@@ -43,13 +43,60 @@ export type TAdminOrdersParams = {
   endDate?: string;
 };
 
+
+
+
+
+
+
+export type TCustomerBadge = "NORMAL" | "VIP" | "LOYAL";
+
+export type TCustomerRankingItem = {
+  rank: number;
+  phone: string;
+  fullName: string;
+  totalOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  totalSpent: number;
+  badge: TCustomerBadge;
+  lastOrderAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TCustomerRankingParams = {
   page?: number;
   limit?: number;
-  badge?: string;
+  badge?: TCustomerBadge;
   phone?: string;
   fullName?: string;
 };
+
+export type TCustomerRankingResponse = {
+  success: boolean;
+  message: string;
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPage: number;
+  };
+  filterCounts: {
+    all: number;
+    NORMAL: number;
+    VIP: number;
+    LOYAL: number;
+  };
+  data: TCustomerRankingItem[];
+};
+
+
+
+
+
+
+
 
 export const placeOrder = async (payload: TPlaceOrderPayload) => {
   const { data } = await apiClient.post(
@@ -116,10 +163,14 @@ export const updatePaymentStatus = async ({
   return data;
 };
 
-export const getCustomerRanking = async (params?: TCustomerRankingParams) => {
-  const { data } = await apiClient.get(ORDER_ENDPOINTS.CUSTOMER_RANKING, {
-    params,
-  });
+export const getCustomerRanking = async (
+  params?: TCustomerRankingParams
+): Promise<TCustomerRankingResponse> => {
+  const { data } = await apiClient.get<TCustomerRankingResponse>(
+    ORDER_ENDPOINTS.CUSTOMER_RANKING,
+    { params }
+  );
+
   return data;
 };
 

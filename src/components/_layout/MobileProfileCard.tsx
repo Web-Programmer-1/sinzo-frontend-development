@@ -5,12 +5,13 @@
 
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { useGetMeQuery, useUpdateUserMutation } from "../../Apis/user/keys";
+import { useGetMe } from "../../Apis/user/queries";
+import { useUpdateUser } from "../../Apis/user/mutations";
 
 
 export default function MobileProfileCard() {
-  const { data, isLoading, isError } = useGetMeQuery();
-  const { mutateAsync, isPending } = useUpdateUserMutation();
+  const { data, isLoading, isError } = useGetMe();
+  const { mutateAsync, isPending } = useUpdateUser();
 
   const user = data?.data;
   const isLoggedIn = !!user?.id;
@@ -76,11 +77,11 @@ export default function MobileProfileCard() {
 
       const res = await mutateAsync({
         id: user.id,
-        payload: formData,
+        data: formData,
       });
 
       setOpenEditModal(false);
-      alert(res?.message || "Profile updated successfully");
+      alert(res?.data?.message || "Profile updated successfully");
     } catch (error: any) {
       alert(
         error?.response?.data?.message ||

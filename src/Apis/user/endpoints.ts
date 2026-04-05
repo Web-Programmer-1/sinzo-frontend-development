@@ -1,7 +1,16 @@
 export const userEndpoints = {
   register: "/users/register",
   login: "/users/login",
-  me: "/users/me",
-  UPDATE_USER: (id: string) => `/users/${id}`,
   forgotPassword: "/users/forgot-password",
+
+  me: "/users/me",
+
+  getAll: "/users",
+  getById: (id: string) => `/users/${id}`,
+
+  update: (id: string) => `/users/${id}`,
+  delete: (id: string) => `/users/${id}`,
+
+  block: (id: string) => `/users/block/${id}`,
+  unblock: (id: string) => `/users/unblock/${id}`,
 };

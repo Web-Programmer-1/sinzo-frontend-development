@@ -19,10 +19,9 @@ import Image from "next/image";
 
 const IMAGES = [
   // { src: "/banners/slider1.png", alt: "Banner 1" },
-  { src: "/banners/mega.jpg", alt: "Banner 2" },
-  { src: "/banners/mega1.jpg", alt: "Banner 3" },
-  // আরো image যোগ করতে এখানে add করো:
-  // { src: "/banners/banner-4.jpg", alt: "Banner 4" },
+  { src: "/banners/cover.jpeg", alt: "Banner 2" },
+  { src: "/banners/cover1.png", alt: "Banner 2" },
+
 ];
 
 const AUTO_PLAY_MS = 3000;

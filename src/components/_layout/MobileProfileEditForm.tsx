@@ -3,12 +3,12 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 
 import { toast } from "sonner";
-import { useGetMeQuery } from "../../Apis/user/queries";
-import { useUpdateUserMutation } from "../../Apis/user/mutations";
+import { useUpdateUser } from "../../Apis/user/mutations";
+import { useGetMe } from "../../Apis/user/queries";
 
 export default function MobileProfileEditForm() {
-  const { data, isLoading } = useGetMeQuery();
-  const { mutateAsync, isPending } = useUpdateUserMutation();
+  const { data, isLoading } = useGetMe();
+  const { mutateAsync, isPending } = useUpdateUser();
 
   const user = data?.data;
 
@@ -73,10 +73,10 @@ export default function MobileProfileEditForm() {
 
       const res = await mutateAsync({
         id: user.id,
-        payload: formData,
+        data: formData,
       });
 
-      toast.success(res?.message || "Profile updated successfully");
+      toast.success(res?.data?.message || "Profile updated successfully");
     } catch (error: any) {
       toast.error(
         error?.response?.data?.message ||

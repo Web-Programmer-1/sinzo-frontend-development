@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useGetCustomerRanking } from "../../../Apis/order";
+import { useGetCustomerRanking } from "../../Apis/order";
 
 
 type TCustomerBadge = "ALL" | "NORMAL" | "VIP" | "LOYAL";
@@ -55,7 +55,7 @@ const formatCurrency = (amount: number) => {
   return `৳${amount.toLocaleString()}`;
 };
 
-export default function CustomerRankingSection() {
+export default function UserSideCustomarRanking() {
   const [page, setPage] = useState(1);
   const [selectedBadge, setSelectedBadge] = useState<TCustomerBadge>("ALL");
 

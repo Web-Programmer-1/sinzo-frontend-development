@@ -1,11 +1,20 @@
+
+
+
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { usePlaceOrder } from "../../Apis/order";
 import Image from "next/image";
+
+import { usePlaceOrder } from "../../Apis/order";
+import {
+  useCreateCheckoutDraft,
+  useDeleteCheckoutDraft,
+  useUpdateCheckoutDraft,
+} from "../../Apis/checkoutdraf";
 
 type TPaymentGateway = "BKASH" | "NOGOD";
 
@@ -19,7 +28,6 @@ type TPlaceOrderFormValues = {
   deliveryArea: "INSIDE_CITY" | "OUTSIDE_CITY";
   paymentMethod: "CASH_ON_DELIVERY" | "ONLINE_PAYMENT";
 
-  // online payment extra fields
   paymentGateway?: TPaymentGateway;
   paymentNumber?: string;
   transactionId?: string;
@@ -29,12 +37,38 @@ type PlaceOrderFormProps = {
   defaultValues?: Partial<TPlaceOrderFormValues>;
 };
 
+const DEFAULT_FORM_VALUES: TPlaceOrderFormValues = {
+  fullName: "",
+  phone: "",
+  email: "",
+  addressLine: "",
+  deliveryArea: "INSIDE_CITY",
+  paymentMethod: "CASH_ON_DELIVERY",
+  paymentGateway: "BKASH",
+  paymentNumber: "",
+  transactionId: "",
+};
+
+const CHECKOUT_DRAFT_STORAGE_KEY = "sinzo_checkout_draft_form";
+const CHECKOUT_DRAFT_ID_STORAGE_KEY = "sinzo_checkout_draft_id";
+
 const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
   const router = useRouter();
-  const { mutateAsync, isPending } = usePlaceOrder();
+  const { mutateAsync: placeOrder, isPending } = usePlaceOrder();
+
+  const { mutateAsync: createCheckoutDraft } = useCreateCheckoutDraft();
+  const { mutateAsync: updateCheckoutDraft } = useUpdateCheckoutDraft();
+  const { mutateAsync: deleteCheckoutDraft } = useDeleteCheckoutDraft();
+
   const [activeGateway, setActiveGateway] = useState<TPaymentGateway>(
-    defaultValues?.paymentGateway || "BKASH",
+    defaultValues?.paymentGateway || "BKASH"
   );
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  const isSubmittingRef = useRef(false);
+  const isSavingDraftRef = useRef(false);
+  const latestValuesRef = useRef<TPlaceOrderFormValues>(DEFAULT_FORM_VALUES);
 
   const {
     register,
@@ -48,7 +82,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
       fullName: defaultValues?.fullName || "",
       phone: defaultValues?.phone || "",
       email: defaultValues?.email || "",
-
       addressLine: defaultValues?.addressLine || "",
       deliveryArea: defaultValues?.deliveryArea || "INSIDE_CITY",
       paymentMethod: defaultValues?.paymentMethod || "CASH_ON_DELIVERY",
@@ -58,6 +91,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
     },
   });
 
+  const watchedValues = watch();
   const deliveryArea = watch("deliveryArea");
   const paymentMethod = watch("paymentMethod");
   const isOnlinePayment = paymentMethod === "ONLINE_PAYMENT";
@@ -66,15 +100,159 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
     return deliveryArea === "INSIDE_CITY" ? 80 : 140;
   }, [deliveryArea]);
 
+  const buildDraftPayload = (values: TPlaceOrderFormValues) => {
+    return {
+      fullName: values.fullName?.trim() || null,
+      phone: values.phone?.trim() || null,
+      email: values.email?.trim() || null,
+      addressLine: values.addressLine?.trim() || null,
+      deliveryArea: values.deliveryArea || null,
+      paymentMethod: values.paymentMethod || null,
+    };
+  };
+
+  const hasDraftMeaningfulData = (values: TPlaceOrderFormValues) => {
+    return Boolean(
+      values.fullName?.trim() ||
+        values.phone?.trim() ||
+        values.email?.trim() ||
+        values.addressLine?.trim()
+    );
+  };
+
+  useEffect(() => {
+    latestValuesRef.current = watchedValues;
+  }, [watchedValues]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const savedDraftId = localStorage.getItem(CHECKOUT_DRAFT_ID_STORAGE_KEY);
+      const savedFormData = localStorage.getItem(CHECKOUT_DRAFT_STORAGE_KEY);
+
+      if (savedDraftId) {
+        setDraftId(savedDraftId);
+      }
+
+      if (savedFormData) {
+        const parsed = JSON.parse(savedFormData);
+
+        reset({
+          ...DEFAULT_FORM_VALUES,
+          ...parsed,
+        });
+
+        if (parsed?.paymentGateway) {
+          setActiveGateway(parsed.paymentGateway);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to restore checkout draft from localStorage", error);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, [reset]);
+
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+
+    try {
+      localStorage.setItem(
+        CHECKOUT_DRAFT_STORAGE_KEY,
+        JSON.stringify(watchedValues)
+      );
+    } catch (error) {
+      console.error("Failed to save checkout form in localStorage", error);
+    }
+  }, [watchedValues, isHydrated]);
+
+  const saveDraftToBackend = async () => {
+    if (!isHydrated) return;
+    if (isSubmittingRef.current) return;
+    if (isSavingDraftRef.current) return;
+
+    const currentValues = latestValuesRef.current;
+
+    if (!hasDraftMeaningfulData(currentValues)) return;
+
+    isSavingDraftRef.current = true;
+
+    try {
+      const payload = buildDraftPayload(currentValues);
+
+      if (draftId) {
+        await updateCheckoutDraft({
+          id: draftId,
+          payload,
+        });
+      } else {
+        const created = await createCheckoutDraft(payload);
+        if (created?.id) {
+          setDraftId(created.id);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(CHECKOUT_DRAFT_ID_STORAGE_KEY, created.id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to save checkout draft", error);
+    } finally {
+      isSavingDraftRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isHydrated) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        saveDraftToBackend();
+      }
+    };
+
+    const handlePageHide = () => {
+      saveDraftToBackend();
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [draftId, isHydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && !isSubmittingRef.current) {
+        try {
+          const values = latestValuesRef.current;
+
+          if (hasDraftMeaningfulData(values)) {
+            localStorage.setItem(
+              CHECKOUT_DRAFT_STORAGE_KEY,
+              JSON.stringify(values)
+            );
+          }
+        } catch (error) {
+          console.error("Failed to persist form on unmount", error);
+        }
+      }
+    };
+  }, []);
+
   const onSubmit = async (values: TPlaceOrderFormValues) => {
+    isSubmittingRef.current = true;
+
     try {
       const payload: Record<string, any> = {
         fullName: values.fullName,
         phone: values.phone,
         email: values.email,
-
         addressLine: values.addressLine,
-
         deliveryArea: values.deliveryArea,
         paymentMethod: values.paymentMethod,
       };
@@ -85,29 +263,29 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
         payload.transactionId = values.transactionId;
       }
 
-      const res = await mutateAsync(payload as any);
+      const res = await placeOrder(payload as any);
 
       if (res?.success) {
+        if (draftId) {
+          try {
+            await deleteCheckoutDraft(draftId);
+          } catch (error) {
+            console.error("Draft delete failed after order success", error);
+          }
+        }
+
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(CHECKOUT_DRAFT_STORAGE_KEY);
+          localStorage.removeItem(CHECKOUT_DRAFT_ID_STORAGE_KEY);
+        }
+
         toast.success(res?.message || "Order placed successfully");
 
-        setTimeout(() => {
-          router.push("/userDashboard/order");
-        }, 1000);
-
-        reset({
-          fullName: "",
-          phone: "",
-          email: "",
-
-          addressLine: "",
-          deliveryArea: "INSIDE_CITY",
-          paymentMethod: "CASH_ON_DELIVERY",
-          paymentGateway: "BKASH",
-          paymentNumber: "",
-          transactionId: "",
-        });
-
+        reset(DEFAULT_FORM_VALUES);
         setActiveGateway("BKASH");
+        setDraftId(null);
+
+        router.push("/userDashboard/order");
       } else {
         toast.error(res?.message || "Failed to place order");
       }
@@ -115,36 +293,49 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
-          "Something went wrong",
+          "Something went wrong"
       );
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 
   const handleGatewayChange = (gateway: TPaymentGateway) => {
     setActiveGateway(gateway);
-    setValue("paymentGateway", gateway);
+    setValue("paymentGateway", gateway, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Form */}
         <div className="lg:col-span-2">
           <div className="overflow-hidden rounded-3xl border border-black/10 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08)]">
             <div className="border-b border-black/10 px-6 py-5 md:px-8">
-              <h2 className="text-2xl font-semibold tracking-tight text-black">
-                Place Your Order
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Please fill in your delivery information carefully.
-              </p>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-black">
+                    Place Your Order
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Please fill in your delivery information carefully.
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex">
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                    Draft Save on Leave
+                  </span>
+                </div>
+              </div>
             </div>
 
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="px-6 py-6 md:px-8"
             >
-              {/* Contact Info */}
               <div className="mb-8">
                 <h3 className="mb-4 text-lg font-semibold text-black">
                   Contact Information
@@ -207,7 +398,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                 </div>
               </div>
 
-              {/* Address Info */}
               <div className="mb-8">
                 <h3 className="mb-4 text-lg font-semibold text-black">
                   Delivery Address
@@ -235,7 +425,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                 </div>
               </div>
 
-              {/* Delivery & Payment */}
               <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
                   <h3 className="mb-4 text-lg font-semibold text-black">
@@ -255,9 +444,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                       <input
                         type="radio"
                         value="INSIDE_CITY"
-                        {...register("deliveryArea", {
-                          required: true,
-                        })}
+                        {...register("deliveryArea", { required: true })}
                         className="h-4 w-4"
                       />
                     </label>
@@ -274,9 +461,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                       <input
                         type="radio"
                         value="OUTSIDE_CITY"
-                        {...register("deliveryArea", {
-                          required: true,
-                        })}
+                        {...register("deliveryArea", { required: true })}
                         className="h-4 w-4"
                       />
                     </label>
@@ -301,9 +486,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                       <input
                         type="radio"
                         value="CASH_ON_DELIVERY"
-                        {...register("paymentMethod", {
-                          required: true,
-                        })}
+                        {...register("paymentMethod", { required: true })}
                         className="h-4 w-4"
                       />
                     </label>
@@ -320,9 +503,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                       <input
                         type="radio"
                         value="ONLINE_PAYMENT"
-                        {...register("paymentMethod", {
-                          required: true,
-                        })}
+                        {...register("paymentMethod", { required: true })}
                         className="h-4 w-4"
                       />
                     </label>
@@ -330,7 +511,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                 </div>
               </div>
 
-              {/* Online Payment Extra Section */}
               {isOnlinePayment && (
                 <div className="mb-8 rounded-3xl border border-black/10 bg-[#fafafa] p-4 md:p-5">
                   <div className="mb-4">
@@ -343,7 +523,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                     </p>
                   </div>
 
-                  {/* Tutorial */}
                   <div className="mb-5 rounded-2xl border border-black/10 bg-white p-4">
                     <p className="mb-2 text-sm font-semibold text-black">
                       How to send money
@@ -365,18 +544,14 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                         number.
                       </p>
                       <p>4. After payment, copy the transaction ID.</p>
-                      <p>
-                        5. Enter your payment number and transaction ID below.
-                      </p>
+                      <p>5. Enter your payment number and transaction ID below.</p>
                     </div>
                   </div>
 
                   <div className="mb-5 grid grid-cols-2 gap-3">
                     <div
                       onClick={() => handleGatewayChange("BKASH")}
-                      className={`cursor-pointer overflow-hidden rounded-2xl transition ${
-                        activeGateway === "BKASH"
-                      }`}
+                      className="cursor-pointer overflow-hidden rounded-2xl transition"
                     >
                       <div className="relative h-[60px] w-full">
                         <Image
@@ -390,9 +565,7 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
 
                     <div
                       onClick={() => handleGatewayChange("NOGOD")}
-                      className={`cursor-pointer overflow-hidden rounded-2xl transition ${
-                        activeGateway === "NOGOD"
-                      }`}
+                      className="cursor-pointer overflow-hidden rounded-2xl transition"
                     >
                       <div className="relative h-[60px] w-full">
                         <Image
@@ -436,7 +609,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                   </div>
 
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {/* Payment Number Input */}
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-gray-800">
                         Your Payment Number{" "}
@@ -465,26 +637,13 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                           }`}
                         />
                       </div>
-                      {/* Error Message with Icon */}
                       {errors.paymentNumber && (
-                        <p className="mt-1.5 flex items-center text-sm font-medium text-red-500">
-                          <svg
-                            className="mr-1.5 h-4 w-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                        <p className="mt-1.5 text-sm font-medium text-red-500">
                           {errors.paymentNumber.message}
                         </p>
                       )}
                     </div>
 
-                    {/* Transaction ID Input */}
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-gray-800">
                         Transaction ID <span className="text-red-500">*</span>
@@ -505,20 +664,8 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                           }`}
                         />
                       </div>
-                      {/* Error Message with Icon */}
                       {errors.transactionId && (
-                        <p className="mt-1.5 flex items-center text-sm font-medium text-red-500">
-                          <svg
-                            className="mr-1.5 h-4 w-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                        <p className="mt-1.5 text-sm font-medium text-red-500">
                           {errors.transactionId.message}
                         </p>
                       )}
@@ -538,7 +685,6 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
           </div>
         </div>
 
-        {/* Right Summary */}
         <div className="lg:col-span-1">
           <div className="sticky top-6 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08)]">
             <div className="border-b border-black/10 px-6 py-5">
@@ -592,6 +738,17 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                   </p>
                 </div>
               )}
+
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-emerald-600">
+                  Draft Status
+                </p>
+                <p className="mt-1 text-sm font-semibold text-emerald-800">
+                  {draftId
+                    ? "Draft will update when leaving page"
+                    : "Draft will save when leaving page"}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -601,3 +758,15 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
 };
 
 export default PlaceOrderForm;
+
+
+
+
+
+
+
+
+
+
+
+

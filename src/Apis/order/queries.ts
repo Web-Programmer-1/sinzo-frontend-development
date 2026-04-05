@@ -8,6 +8,7 @@ import {
   trackOrder,
   TAdminOrdersParams,
   TCustomerRankingParams,
+  TCustomerRankingResponse,
 } from "./apis";
 import { orderKeys } from "./keys";
 
@@ -50,7 +51,7 @@ export const useGetOrderById = (id: string) => {
 };
 
 export const useGetCustomerRanking = (params?: TCustomerRankingParams) => {
-  return useQuery({
+  return useQuery<TCustomerRankingResponse>({
     queryKey: orderKeys.customerRanking(params),
     queryFn: () => getCustomerRanking(params),
   });

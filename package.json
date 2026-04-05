@@ -21,6 +21,7 @@
     "sweetalert2": "^11.26.24"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.9",
     "@types/node": "^25.3.5",
     "@types/react": "^19.2.14",
     "autoprefixer": "^10.4.27",

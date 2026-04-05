@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DropdownItem = {
@@ -79,6 +79,25 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
   ),
+
+
+    User: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A11.955 11.955 0 0112 15c2.5 0 4.824.765 6.879 2.072M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2 9 9 0 1118 0 2 2 0 01-2 2z" />
+    </svg>
+  ),
+  Logout: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 20H6a2 2 0 01-2-2V6a2 2 0 012-2h7" />
+    </svg>
+  ),
+
+
+
+
+
   Plus: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -142,12 +161,12 @@ const NAV_ITEMS: NavItemType[] = [
   {
     icon: <Icon.Customers />,
     label: "Customers",
-    href: "/dashboard/customers",
+    href: "/dashboard/customars",
   },
   {
     icon: <Icon.Analytics />,
-    label: "Analytics",
-    href: "/dashboard/analytics",
+    label: "checkoutdraf",
+    href: "/dashboard/checkoutdraf",
   },
   {
     icon: <Icon.Settings />,
@@ -322,13 +341,43 @@ interface TopbarProps {
 
 function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const title = PAGE_TITLES[pathname] ?? "Dashboard";
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    // ekhane pore logout API / cookie remove logic boshate parba
+    setProfileOpen(false);
+    router.push("/login");
+  };
 
   return (
     <header className="h-16 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 shadow-sm">
-      <button onClick={onOpenMobile} className="md:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition">
+      <button
+        onClick={onOpenMobile}
+        className="md:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition"
+      >
         <Icon.Menu />
       </button>
+
       <button
         onClick={onToggleSidebar}
         className="hidden md:flex p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition items-center justify-center"
@@ -336,22 +385,56 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
         {collapsed ? <Icon.Menu /> : <Icon.X />}
       </button>
 
-      <h1 className="font-bold text-slate-800 text-base flex-1 truncate">{title}</h1>
+      <h1 className="font-bold text-slate-800 text-base flex-1 truncate">
+        {title}
+      </h1>
 
       <div className="flex items-center gap-2">
         <button className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition">
           <Icon.Bell />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br 
-        bg-black flex items-center justify-center text-white font-bold text-xs cursor-pointer">
-          A
+
+        <div className="relative" ref={profileRef}>
+          <button
+            onClick={() => setProfileOpen((prev) => !prev)}
+            className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white font-bold text-sm cursor-pointer shadow-sm hover:scale-[1.03] transition"
+          >
+            A
+          </button>
+
+          {profileOpen && (
+            <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-800">Admin User</p>
+                <p className="text-xs text-slate-500">admin@mobishop.bd</p>
+              </div>
+
+              <div className="p-2">
+                <Link
+                  href="/dashboard/profile"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  <Icon.User />
+                  My Profile
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  <Icon.Logout />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
 }
-
 // ── Dashboard Layout ──────────────────────────────────────────────────────────
 export default function Dashboard({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed]   = useState(false);

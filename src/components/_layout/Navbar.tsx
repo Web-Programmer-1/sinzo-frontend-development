@@ -1385,7 +1385,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useGetMyCart } from "../../Apis/cart";
 import { useGlobalProductSearch } from "../../lib/GlobalSearch";
-import { useGetMeQuery } from "../../Apis/user/queries";
+import { useGetMe } from "../../Apis/user/queries";
 
 interface NavItem {
   label: string;
@@ -1454,7 +1454,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { data: meData } = useGetMeQuery();
+  const { data: meData } = useGetMe();
   const user = meData?.data;
   const isLoggedIn = !!user?.id;
   const isAdmin = user?.role === "ADMIN";

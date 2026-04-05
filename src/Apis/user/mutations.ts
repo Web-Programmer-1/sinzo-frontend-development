@@ -1,40 +1,77 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { loginUserApi, registerUserApi, TLoginPayload, TRegisterPayload, updateUserApi } from "./apis";
-import {} from "./keys"
-import { userKeys } from ".";
-export const useRegisterMutation = () => {
+import {
+  registerUser,
+  loginUser,
+  updateUser,
+  deleteUser,
+  blockUser,
+  unblockUser,
+} from "./apis";
+import { userKeys } from "./keys";
+
+// register
+export const useRegisterUser = () => {
   return useMutation({
-    mutationFn: (payload: TRegisterPayload) => registerUserApi(payload),
+    mutationFn: registerUser,
   });
 };
 
-export const useLoginMutation = () => {
+// login
+export const useLoginUser = () => {
+  return useMutation({
+    mutationFn: loginUser,
+  });
+};
+
+// update
+export const useUpdateUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: TLoginPayload) => loginUserApi(payload),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: userKeys.me(),
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      updateUser(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: userKeys.detail(variables.id),
       });
+      queryClient.invalidateQueries({ queryKey: userKeys.me });
     },
   });
 };
 
-
-
-
-export const useUpdateUserMutation = () => {
+// delete
+export const useDeleteUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: updateUserApi,
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+    },
+  });
+};
 
-    onSuccess: async () => {
-      // 🔥 important: refresh user data
-      await queryClient.invalidateQueries({
-        queryKey: userKeys.me(),
-      });
+// block
+export const useBlockUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: blockUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+    },
+  });
+};
+
+// unblock
+export const useUnblockUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: unblockUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
     },
   });
 };
