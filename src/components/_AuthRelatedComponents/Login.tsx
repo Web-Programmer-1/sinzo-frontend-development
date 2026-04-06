@@ -5,8 +5,9 @@
 // import { useForm } from "react-hook-form";
 // import { toast } from "sonner";
 // import { AxiosError } from "axios";
-// import { useLoginMutation } from "../../Apis/user/keys";
+
 // import { useRouter } from "next/navigation";
+// import { useLoginUser } from "../../Apis/user/mutations";
 
 // type LoginFormValues = {
 //   email: string;
@@ -18,7 +19,7 @@
 // };
 
 // export default function LoginForm() {
-//   const loginMutation = useLoginMutation();
+//   const loginMutation = useLoginUser();
 
 //   const router = useRouter();
 
@@ -38,11 +39,11 @@
 //     try {
 //       const res = await loginMutation.mutateAsync(data);
 
-//       if(res.success){
+//       if(res.data?.success){
 //         router.push("/");
 //       }
 
-//       toast.success(res.message || "Login successful");
+//       toast.success(res.data?.message || "Login successful");
 //       reset();
 //     } catch (error) {
 //       const err = error as AxiosError<TErrorResponse>;
@@ -137,17 +138,18 @@
 
 
 
-
-
-
 "use client";
 
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLoginUser } from "../../Apis/user/mutations";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { getMe } from "../../Apis/user/apis";
+import { userKeys } from "../../Apis/user/keys";
+
 
 type LoginFormValues = {
   email: string;
@@ -162,8 +164,9 @@ export default function LoginForm() {
   const loginMutation = useLoginUser();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
-  const redirectPath = searchParams.get("redirect") || "/";
+  const redirect = searchParams.get("redirect");
 
   const {
     register,
@@ -177,36 +180,45 @@ export default function LoginForm() {
     },
   });
 
-const onSubmit = async (data: LoginFormValues) => {
-  try {
-    const res = await loginMutation.mutateAsync(data);
+  const onSubmit = async (formData: LoginFormValues) => {
+    try {
+      const res = await loginMutation.mutateAsync(formData);
+      console.log(res.data)
 
-    if (res.data?.success) {
-      toast.success(res.data?.message || "Login successful");
-      reset();
+      if (res?.data?.success) {
+        await queryClient.invalidateQueries({ queryKey: userKeys.me });
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+        const me = await queryClient.fetchQuery({
+          queryKey: userKeys.me,
+          queryFn: getMe,
+        });
 
-      // Role check করে redirect করো
-      const userRole = res?.data?.user?.role;
+        toast.success(res.data?.message || "Login successful");
 
-      if (redirectPath && redirectPath !== "/") {
-        router.push(redirectPath);
-      } else if (userRole === "ADMIN") {
-        router.push("/dashboard");
-      } else {
-        router.push("/");
+        console.log(res.data)
+        reset();
+
+        const role = me?.data?.role;
+
+        if (role === "ADMIN") {
+          router.replace("/dashboard");
+          return;
+        }
+
+        if (redirect) {
+          router.replace(redirect);
+          return;
+        }
+
+        router.replace("/");
       }
-
-      router.refresh(); // middleware কে নতুন cookie দিয়ে recheck করাও
+    } catch (error) {
+      const err = error as AxiosError<TErrorResponse>;
+      toast.error(
+        err.response?.data?.message || "Login failed. Please try again."
+      );
     }
-  } catch (error) {
-    const err = error as AxiosError<TErrorResponse>;
-    toast.error(
-      err.response?.data?.message || "Login failed. Please try again."
-    );
-  }
-};
+  };
 
   return (
     <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.08)] sm:p-8">
@@ -278,3 +290,6 @@ const onSubmit = async (data: LoginFormValues) => {
     </div>
   );
 }
+
+
+

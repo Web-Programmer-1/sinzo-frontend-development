@@ -21,5 +21,9 @@ export const useGetMe = () => {
   return useQuery({
     queryKey: userKeys.me,
     queryFn: getMe,
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };

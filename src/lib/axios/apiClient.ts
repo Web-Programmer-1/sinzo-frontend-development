@@ -1,6 +1,3 @@
-
-
-
 import axios from "axios";
 
 export const apiClient = axios.create({
@@ -10,13 +7,6 @@ export const apiClient = axios.create({
     "Content-Type": "application/json",
   },
 });
-
-apiClient.interceptors.request.use(
-  (config) => {
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -34,4 +24,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-

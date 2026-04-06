@@ -13,8 +13,10 @@ export const forgotPassword = (email: string) =>
   apiClient.post(userEndpoints.forgotPassword, { email });
 
 // user
-export const getMe = () =>
-  apiClient.get(userEndpoints.me);
+export const getMe = async () => {
+  const res = await apiClient.get("/users/me");
+  return res.data;
+};
 
 export const getAllUsers = () =>
   apiClient.get(userEndpoints.getAll);
