@@ -6,6 +6,7 @@ import {
   deleteUser,
   blockUser,
   unblockUser,
+  logoutUser,
 } from "./apis";
 import { userKeys } from "./keys";
 
@@ -71,6 +72,19 @@ export const useUnblockUser = () => {
   return useMutation({
     mutationFn: unblockUser,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+    },
+  });
+};
+
+
+export const useLogoutUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: logoutUser,
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: userKeys.me });
       queryClient.invalidateQueries({ queryKey: userKeys.all });
     },
   });

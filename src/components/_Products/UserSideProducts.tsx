@@ -3,7 +3,6 @@
 import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-
 import { useGetAllCategories } from "../../Apis/category/queries";
 import { useGetAllProducts } from "../../Apis/products/queries";
 import Image from "next/image";
@@ -45,6 +44,12 @@ interface Meta {
   total: number;
 }
 
+type TColorOption = {
+  value: string;
+  hex: string;
+  border?: string;
+};
+
 const BADGE_LABELS: Record<string, string> = {
   SALE: "Sale",
   BEST_SELLER: "Best Seller",
@@ -60,16 +65,18 @@ const BADGE_BG: Record<string, string> = {
   NEW: "#1a7f4b",
 };
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-const COLORS = [
-  "Black",
-  "White",
-  "Blue",
-  "Red",
-  "Green",
-  "Grey",
-  "Brown",
-  "Navy",
+
+const COLORS: TColorOption[] = [
+  { value: "Black", hex: "#111111", border: "#111111" },
+  { value: "White", hex: "#ffffff", border: "#d1d5db" },
+  { value: "Blue", hex: "#2563eb", border: "#2563eb" },
+  { value: "Red", hex: "#ef4444", border: "#ef4444" },
+  { value: "Green", hex: "#22c55e", border: "#22c55e" },
+  { value: "Grey", hex: "#9ca3af", border: "#9ca3af" },
+  { value: "Brown", hex: "#8b5e3c", border: "#8b5e3c" },
+  { value: "Navy", hex: "#1e3a8a", border: "#1e3a8a" },
 ];
+
 const SORT_OPTIONS = [
   { value: "", label: "Default" },
   { value: "oldest", label: "Oldest First" },
@@ -87,14 +94,12 @@ function ProductsPage() {
     searchParams.get("categoryId") || "",
   );
 
-
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
-const { data: cartData, refetch: refetchCart } = useGetMyCart();
+  const { data: cartData, refetch: refetchCart } = useGetMyCart();
 
-const cartItems = cartData?.data?.items || [];
-const cartSummary = cartData?.data?.summary;
-
+  const cartItems = cartData?.data?.items || [];
+  const cartSummary = cartData?.data?.summary;
 
   const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
@@ -132,6 +137,7 @@ const cartSummary = cartData?.data?.summary;
     setDraft({ minPrice, maxPrice, size, color, sort });
     setDrawerOpen(true);
   };
+
   const applyDraft = () => {
     setMinPrice(draft.minPrice);
     setMaxPrice(draft.maxPrice);
@@ -141,6 +147,7 @@ const cartSummary = cartData?.data?.summary;
     setPage(1);
     setDrawerOpen(false);
   };
+
   const clearAll = () => {
     setDraft({ minPrice: "", maxPrice: "", size: "", color: "", sort: "" });
     setMinPrice("");
@@ -253,15 +260,14 @@ const cartSummary = cartData?.data?.summary;
 
         <div style={F.section}>
           <p style={F.label}>Color</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={F.colorWrap}>
             {COLORS.map((c) => (
-              <Chip
-                key={c}
-                active={v.color === c}
-                onClick={() => set("color", v.color === c ? "" : c)}
-              >
-                {c}
-              </Chip>
+              <ColorSwatch
+                key={c.value}
+                color={c}
+                active={v.color === c.value}
+                onClick={() => set("color", v.color === c.value ? "" : c.value)}
+              />
             ))}
           </div>
         </div>
@@ -274,23 +280,9 @@ const cartSummary = cartData?.data?.summary;
         <button style={F.clearBtn} onClick={clearAll}>
           Clear All
         </button>
-
-
-
-
-
-
-
       </div>
     );
-
-
-    
   };
-
-
-
-
 
   return (
     <>
@@ -420,17 +412,17 @@ const cartSummary = cartData?.data?.summary;
             </EmptyState>
           ) : (
             <div className="pp-grid">
-          {products.map((p, i) => (
-  <ProductCard
-    key={p.id}
-    product={p}
-    index={i}
-    onAddedToCart={async () => {
-      await refetchCart();
-      setCartDrawerOpen(true);
-    }}
-  />
-))}
+              {products.map((p, i) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  index={i}
+                  onAddedToCart={async () => {
+                    await refetchCart();
+                    setCartDrawerOpen(true);
+                  }}
+                />
+              ))}
             </div>
           )}
 
@@ -486,9 +478,7 @@ const cartSummary = cartData?.data?.summary;
         </div>
       )}
 
-
-
-            {drawerOpen && (
+      {drawerOpen && (
         <div style={T.backdrop} onClick={() => setDrawerOpen(false)}>
           <div style={T.drawer} onClick={(e) => e.stopPropagation()}>
             <div style={T.drawerHead}>
@@ -512,9 +502,6 @@ const cartSummary = cartData?.data?.summary;
       />
     </>
   );
-
-
-
 }
 
 /* ══════════════════════════════════════════════════════
@@ -531,7 +518,6 @@ function CategorySlider({
   onSelect: (id: string) => void;
   showAllCard?: boolean;
 }) {
-  // "All Products" virtual card prepended when showAllCard=true
   const ALL_ID = "__all__";
   const allCard: Category = {
     id: ALL_ID,
@@ -607,7 +593,6 @@ function CategorySlider({
 
   const handleCardClick = (cat: Category) => {
     if (moved.current) return;
-    // All card → clear categoryId; others → toggle
     if (cat.id === ALL_ID) {
       onSelect("");
       return;
@@ -615,7 +600,6 @@ function CategorySlider({
     onSelect(activeCatId === cat.id ? "" : cat.id);
   };
 
-  // "All" card is active when no category is selected
   const isActive = (cat: Category) =>
     cat.id === ALL_ID ? activeCatId === "" : activeCatId === cat.id;
 
@@ -673,7 +657,6 @@ function CategorySlider({
                 outlineOffset: 2,
               }}
             >
-              {/* All Products card — no image, styled differently */}
               {cat.id === ALL_ID ? (
                 <div
                   style={{
@@ -735,7 +718,6 @@ function CategorySlider({
         </div>
       </div>
 
-      {/* dots */}
       <div
         style={{
           display: "flex",
@@ -820,7 +802,13 @@ function ProductCard({
   };
 
   return (
-    <div className="pp-card" onClick={handleDetailsNavigate}>
+    <div
+      className="pp-card "
+      style={{
+        boxShadow: "0 12px 30px rgba(0,0,0,0.14), 0 4px 10px rgba(0,0,0,0.11)"
+      }}
+      onClick={handleDetailsNavigate}
+    >
       <div
         className="pp-card"
         style={{
@@ -867,16 +855,16 @@ function ProductCard({
         </div>
 
         <div style={C.info}>
-          <p style={C.title}>{product.title}</p>
+          <p style={C.title}>
+            {product.title.split(" ").slice(0, 2).join(" ") +
+              (product.title.split(" ").length > 2 ? "..." : "")}
+          </p>
           <span style={C.catTag}>
-            {product.cardShortTitle?.slice(0, 28)}...
+            {product.cardShortTitle?.slice(0, 25)}...
           </span>
 
           <div style={C.priceRow}>
             <span style={C.price}>৳ {product.price.toLocaleString()}</span>
-            {product.totalReviews > 0 && (
-              <span style={C.reviews}>★ {product.totalReviews}</span>
-            )}
           </div>
 
           <div style={C.actions}>
@@ -937,6 +925,7 @@ function CatBtn({
     </button>
   );
 }
+
 function Chip({
   active,
   onClick,
@@ -955,6 +944,53 @@ function Chip({
     </button>
   );
 }
+
+function ColorSwatch({
+  color,
+  active,
+  onClick,
+}: {
+  color: TColorOption;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const isLight =
+    color.value === "White" || color.value === "Grey";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={color.value}
+      title={color.value}
+      style={{
+        ...F.colorSwatch,
+        background: color.hex,
+        border: `1.5px solid ${color.border || color.hex}`,
+        boxShadow: active
+          ? "0 0 0 2px #111, 0 0 0 5px rgba(17,17,17,0.12)"
+          : color.value === "White"
+            ? "inset 0 0 0 1px #e5e7eb"
+            : "none",
+        transform: active ? "scale(1.06)" : "scale(1)",
+      }}
+    >
+      {active && (
+        <span
+          style={{
+            color: isLight ? "#111" : "#fff",
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1,
+          }}
+        >
+          ✓
+        </span>
+      )}
+    </button>
+  );
+}
+
 function Tag({ label, onX }: { label: string; onX: () => void }) {
   return (
     <span style={T.tag}>
@@ -965,6 +1001,7 @@ function Tag({ label, onX }: { label: string; onX: () => void }) {
     </span>
   );
 }
+
 function PgBtn({
   active,
   disabled,
@@ -990,6 +1027,7 @@ function PgBtn({
     </button>
   );
 }
+
 function EmptyState({
   text,
   children,
@@ -1022,6 +1060,7 @@ function EmptyState({
     </div>
   );
 }
+
 function SkeletonCard() {
   return (
     <div className="pp-card" style={{ overflow: "hidden", animation: "none" }}>
@@ -1047,6 +1086,7 @@ function SkeletonCard() {
     </div>
   );
 }
+
 function buildPageNums(total: number, cur: number): (number | "...")[] {
   const arr: (number | "...")[] = [];
   for (let i = 1; i <= total; i++) {
@@ -1070,7 +1110,6 @@ const CSS = `
   *, *::before, *::after { box-sizing: border-box; }
   @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 
-  /* mobile category slider — visible only on small screens */
   .pp-mobile-cat { display: block; }
 
   .pp-root {
@@ -1083,6 +1122,7 @@ const CSS = `
     min-height: 60vh;
     font-family: 'DM Sans', sans-serif;
   }
+
   .pp-sidebar { width: 220px; flex-shrink: 0; display: block; }
   .pp-main    { flex: 1; min-width: 0; }
 
@@ -1091,15 +1131,19 @@ const CSS = `
     margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
   }
 
-  /* 2-col mobile, 3-col tablet, 4-col desktop */
   .pp-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
   @media (min-width: 640px)  { .pp-grid { grid-template-columns: repeat(3,1fr); gap: 14px; } }
   @media (min-width: 1024px) { .pp-grid { grid-template-columns: repeat(4,1fr); gap: 16px; } }
 
   .pp-card {
-    background: #fff; border-radius: 12px; overflow: hidden;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08),
+                0 2px 6px rgba(0,0,0,0.04);
     transition: transform .28s ease, box-shadow .28s ease;
-    animation: fadeUp .35s ease both; cursor: pointer;
+    animation: fadeUp .35s ease both;
+    cursor: pointer;
   }
 
   .pp-mobile-filter-btn { display: none !important; }
@@ -1113,14 +1157,13 @@ const CSS = `
   }
 
   @media (min-width: 861px) {
-    .pp-mobile-cat { display: none; }   /* slider hidden on desktop */
+    .pp-mobile-cat { display: none; }
   }
 `;
 
 /* ── Styles ────────────────────────────────────────── */
 const F: Record<string, React.CSSProperties> = {
   sidebarTitle: {
-    fontFamily: "'Syne',sans-serif",
     fontWeight: 700,
     fontSize: "1rem",
     color: "#111",
@@ -1133,11 +1176,10 @@ const F: Record<string, React.CSSProperties> = {
     marginBottom: 14,
   },
   label: {
-    fontFamily: "'Syne',sans-serif",
     fontSize: "0.67rem",
     fontWeight: 700,
     letterSpacing: "0.08em",
-    textTransform: "uppercase" as const,
+    textTransform: "none" as const,
     color: "#999",
     margin: "0 0 8px",
   },
@@ -1152,7 +1194,6 @@ const F: Record<string, React.CSSProperties> = {
     color: "#444",
     cursor: "pointer",
     borderRadius: 8,
-    fontFamily: "'DM Sans',sans-serif",
     marginBottom: 2,
     transition: "all 0.15s",
   },
@@ -1165,7 +1206,6 @@ const F: Record<string, React.CSSProperties> = {
     background: "#fff",
     color: "#444",
     cursor: "pointer",
-    fontFamily: "'DM Sans',sans-serif",
     transition: "all 0.15s",
   },
   chipActive: { background: "#111", color: "#fff", border: "1.5px solid #111" },
@@ -1175,11 +1215,30 @@ const F: Record<string, React.CSSProperties> = {
     border: "1.5px solid #e0e0e0",
     borderRadius: 8,
     fontSize: "0.8rem",
-    fontFamily: "'DM Sans',sans-serif",
     outline: "none",
     background: "#fff",
     color: "#111",
     minWidth: 0,
+  },
+  colorWrap: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "center",
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    minWidth: 28,
+    borderRadius: "50%",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.18s ease",
+    padding: 0,
+    outline: "none",
+    backgroundClip: "padding-box",
   },
   applyBtn: {
     width: "100%",
@@ -1201,7 +1260,6 @@ const F: Record<string, React.CSSProperties> = {
     color: "#999",
     border: "1.5px solid #e0e0e0",
     borderRadius: 10,
-    fontFamily: "'DM Sans',sans-serif",
     fontSize: "0.82rem",
     cursor: "pointer",
   },
@@ -1238,14 +1296,12 @@ const T: Record<string, React.CSSProperties> = {
     fontSize: "0.88rem",
     color: "#555",
     margin: 0,
-    fontFamily: "'DM Sans',sans-serif",
   },
   sortSelect: {
     padding: "7px 12px",
     border: "1.5px solid #e0e0e0",
     borderRadius: 8,
     fontSize: "0.82rem",
-    fontFamily: "'DM Sans',sans-serif",
     background: "#fff",
     color: "#111",
     cursor: "pointer",
@@ -1260,7 +1316,6 @@ const T: Record<string, React.CSSProperties> = {
     color: "#fff",
     borderRadius: 20,
     fontSize: "0.73rem",
-    fontFamily: "'DM Sans',sans-serif",
   },
   tagX: {
     background: "none",
@@ -1286,7 +1341,6 @@ const T: Record<string, React.CSSProperties> = {
     background: "#fff",
     color: "#444",
     fontSize: "0.82rem",
-    fontFamily: "'DM Sans',sans-serif",
     cursor: "pointer",
     transition: "all 0.15s",
   },
@@ -1374,34 +1428,37 @@ const C: Record<string, React.CSSProperties> = {
     fontSize: "0.58rem",
     fontWeight: 600,
     color: "#fff",
-    fontFamily: "'DM Sans',sans-serif",
   },
   dimOverlay: {
     position: "absolute" as const,
     inset: 0,
     background: "rgba(255,255,255,0.35)",
   },
-  info: { padding: "10px 11px 12px" },
+  info: {
+    padding: "12px 11px 12px",
+    background: "#fff",
+    position: "relative",
+    zIndex: 2,
+    boxShadow: "0 -12px 25px rgba(0,0,0,0.15)",
+  },
   catTag: {
     display: "inline-block",
-    fontSize: "0.65rem",
+    fontSize: "0.75rem",
     padding: "3px 7px",
     fontWeight: 600,
     letterSpacing: "0.05em",
-    textTransform: "uppercase" as const,
+    textTransform: "none" as const,
     color: "black",
     opacity: 0.6,
-    fontFamily: "sans-serif",
+ 
     marginBottom: 3,
   },
   title: {
     margin: "0 0 6px",
-    fontSize: "0.83rem",
-    fontWeight: 800,
-    color: "#111",
-    lineHeight: 1.3,
+    fontSize: "1.10rem",
+    fontWeight: 900,
+    color: "#black",
     display: "-webkit-box",
-    WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical" as const,
     overflow: "hidden",
   },
@@ -1420,46 +1477,49 @@ const C: Record<string, React.CSSProperties> = {
   reviews: {
     fontSize: "0.68rem",
     color: "#c8930a",
-    fontFamily: "'DM Sans',sans-serif",
   },
   actions: {
     display: "flex",
     alignItems: "center",
     gap: 8,
     width: "100%",
+    fontWeight: 700,
   },
-
   buyBtn: {
     flex: 1,
     minWidth: 0,
-    height: 38,
-    border: "none",
-    borderRadius: 8,
-    background: "#111",
+    height: 35,
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 10,
+    background: "linear-gradient(180deg, #1f1f1f 0%, #0a0a0a 100%)",
     color: "#fff",
-    fontSize: "0.73rem",
-    fontFamily: "'DM Sans',sans-serif",
-    fontWeight: 600,
+    fontSize: "0.60rem",
+    fontWeight: 700,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     whiteSpace: "nowrap",
+    boxShadow:
+      "0 10px 20px rgba(0,0,0,0.28), 0 3px 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10)",
+    transition: "all 0.25s ease",
   },
 
   cartIconBtn: {
     width: 38,
     minWidth: 38,
     height: 38,
-    border: "1.5px solid #e0e0e0",
-    borderRadius: 8,
-    background: "#fff",
+    border: "2px solid #e5e5e5",
+    borderRadius: 10,
+    background: "#FBF0F0",
     color: "#222",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    boxShadow: "0 6px 30px rgba(0,0,0,0.20), 0 2px 12px rgba(0,0,0,0.10)",
+    transition: "all 0.25s ease",
   },
 };
 
@@ -1478,11 +1538,12 @@ const SL: Record<string, React.CSSProperties> = {
     marginBottom: 12,
   },
   title: {
-    fontFamily: "'Syne',sans-serif",
-    fontSize: "1.05rem",
+    fontFamily: "var(--font-poppins)",
+    fontSize: "1.2rem",
     fontWeight: 700,
     margin: 0,
     color: "#111",
+    width: "100%",
   },
   btn: {
     width: 30,

@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useLogoutUser } from "../../Apis/user/mutations";
+import { toast } from "sonner";
+import Image from "next/image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DropdownItem = {
@@ -74,6 +77,47 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+
+  Payment: () => (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
+      {/* Card body */}
+      <rect
+        x="2"
+        y="5"
+        width="20"
+        height="14"
+        rx="2"
+        ry="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Card top stripe */}
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2 10h20"
+      />
+
+      {/* Chip / small detail */}
+      <rect
+        x="6"
+        y="13"
+        width="4"
+        height="2"
+        rx="1"
+      />
+    </svg>
+  ),
+
+
+
   Bell: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -81,7 +125,7 @@ const Icon = {
   ),
 
 
-    User: () => (
+  User: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A11.955 11.955 0 0112 15c2.5 0 4.824.765 6.879 2.072M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2 9 9 0 1118 0 2 2 0 01-2 2z" />
@@ -117,27 +161,27 @@ const NAV_ITEMS: NavItemType[] = [
     label: "Dashboard",
     href: "/dashboard",
   },
-{
-  icon: <Icon.Products />,
-  label: "Products",
-  dropdown: [
-    {
-      label: "Create Product",
-      icon: <Icon.Plus />,
-      href: "/dashboard/product/create",
-    },
-    {
-      label: "All Products List",
-      icon: <Icon.List />,
-      href: "/dashboard/product/view-product",
-    },
-  ],
-},
+  {
+    icon: <Icon.Products />,
+    label: "Products",
+    dropdown: [
+      {
+        label: "Create Product",
+        icon: <Icon.Plus />,
+        href: "/dashboard/product/create",
+      },
+      {
+        label: "All Products List",
+        icon: <Icon.List />,
+        href: "/dashboard/product/view-product",
+      },
+    ],
+  },
   {
     icon: <Icon.Category />,
     label: "Category",
     dropdown: [
-      { label: "Create Category",  icon: <Icon.Plus />, href: "/dashboard/category/create" },
+      { label: "Create Category", icon: <Icon.Plus />, href: "/dashboard/category/create" },
       { label: "All Category List", icon: <Icon.List />, href: "/dashboard/category/category-list" },
     ],
   },
@@ -148,11 +192,11 @@ const NAV_ITEMS: NavItemType[] = [
   },
 
 
-    {
+  {
     icon: <Icon.List />,
     label: "Steadfast",
     dropdown: [
-      { label: "Create Steadfast",  icon: <Icon.Plus />, href: "/dashboard/steadfast/add" },
+      { label: "Create Steadfast", icon: <Icon.Plus />, href: "/dashboard/steadfast/add" },
       { label: "Steadfast List", icon: <Icon.List />, href: "/dashboard/steadfast/list" },
     ],
   },
@@ -169,22 +213,43 @@ const NAV_ITEMS: NavItemType[] = [
     href: "/dashboard/checkoutdraf",
   },
   {
+    icon: <Icon.Payment />,
+    label: "Online Payment",
+    href: "/dashboard/payment",
+  },
+  {
     icon: <Icon.Settings />,
     label: "Settings",
-    href: "/dashboard/settings",
+    dropdown: [
+      {
+        label: "Logo",
+        icon: <Icon.List />,
+        href: "/dashboard/settings/logo",
+      },
+      {
+        label: "Banners",
+        icon: <Icon.List />,
+        href: "/dashboard/settings/banners",
+      },
+      {
+        label: "Payment Setting",
+        icon: <Icon.List />,
+        href: "/dashboard/settings/paymentSetting",
+      },
+    ],
   },
 ];
 
 // ── Page Title Map ─────────────────────────────────────────────────────────────
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard":                    "Dashboard Overview",
-  "/dashboard/products":           "Products",
-  "/dashboard/category/create":    "Create Category",
-  "/dashboard/category":           "Category List",
-  "/dashboard/orders":             "Orders",
-  "/dashboard/customers":          "Customers",
-  "/dashboard/analytics":          "Analytics",
-  "/dashboard/settings":           "Settings",
+  "/dashboard": "Dashboard Overview",
+  "/dashboard/products": "Products",
+  "/dashboard/category/create": "Create Category",
+  "/dashboard/category": "Category List",
+  "/dashboard/orders": "Orders",
+  "/dashboard/customers": "Customers",
+  "/dashboard/analytics": "Analytics",
+  "/dashboard/settings": "Settings",
 };
 
 // ── NavItem Component ─────────────────────────────────────────────────────────
@@ -263,15 +328,25 @@ function NavItem({ item, collapsed, onClose }: NavItemProps) {
   );
 }
 
-// ── Sidebar Component ─────────────────────────────────────────────────────────
 interface SidebarProps {
   collapsed: boolean;
   mobile?: boolean;
   onClose?: () => void;
+  user?: {
+    name?: string | null;
+    fullName?: string | null;
+    email?: string | null;
+    profileImage?: string | null;
+  };
 }
 
-function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
+function Sidebar({ collapsed, mobile = false, onClose, user }: SidebarProps) {
   const isCollapsed = collapsed && !mobile;
+
+  const displayName = user?.fullName || user?.name || "User";
+  const displayEmail = user?.email || "";
+  const profileImage = user?.profileImage || "";
+  const fallbackLetter = displayName.charAt(0).toUpperCase() || "U";
 
   return (
     <aside
@@ -280,17 +355,17 @@ function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
     >
       {/* Logo */}
       <div className={`flex items-center gap-2.5 h-16 px-4 border-b border-slate-100 flex-shrink-0 ${isCollapsed ? "justify-center" : ""}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br 
-        bg-black
-        flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br bg-black flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
           M
         </div>
+
         {!isCollapsed && (
           <div className="min-w-0">
             <p className="font-bold text-slate-800 text-sm leading-tight truncate">MobiShop</p>
             <p className="text-xs text-slate-400 leading-tight">Admin Panel</p>
           </div>
         )}
+
         {mobile && (
           <button onClick={onClose} className="ml-auto p-1 rounded-lg text-slate-400 hover:bg-slate-100">
             <Icon.X />
@@ -298,7 +373,6 @@ function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {NAV_ITEMS.map((item) => (
           <NavItem
@@ -310,20 +384,44 @@ function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* User */}
       <div className={`border-t border-slate-100 p-3 flex-shrink-0 ${isCollapsed ? "flex justify-center" : ""}`}>
         {isCollapsed ? (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
-            A
-          </div>
+          profileImage ? (
+            <div className="relative h-8 w-8 overflow-hidden rounded-full ring-2 ring-slate-200">
+              <Image
+                src={profileImage}
+                alt={displayName}
+                fill
+                sizes="32px"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs">
+              {fallbackLetter}
+            </div>
+          )
         ) : (
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-              A
-            </div>
+            {profileImage ? (
+              <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-slate-200">
+                <Image
+                  src={profileImage}
+                  alt={displayName}
+                  fill
+                  sizes="32px"
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                {fallbackLetter}
+              </div>
+            )}
+
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-700 truncate">Admin User</p>
-              <p className="text-xs text-slate-400 truncate">admin@mobishop.bd</p>
+              <p className="text-sm font-semibold text-slate-700 truncate">{displayName}</p>
+              <p className="text-xs text-slate-400 truncate">{displayEmail}</p>
             </div>
           </div>
         )}
@@ -341,6 +439,7 @@ interface TopbarProps {
 
 function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
   const pathname = usePathname();
+  const { mutate: logout, isPending: isLoggingOut } = useLogoutUser();
   const router = useRouter();
   const title = PAGE_TITLES[pathname] ?? "Dashboard";
 
@@ -363,10 +462,17 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
     };
   }, []);
 
-  const handleLogout = async () => {
-    // ekhane pore logout API / cookie remove logic boshate parba
-    setProfileOpen(false);
-    router.push("/login");
+  const handleLogout = () => {
+    logout(undefined, {
+      onSuccess: () => {
+        setProfileOpen(false);
+        toast.success("Logout successful");
+        router.push("/login");
+      },
+      onError: () => {
+        toast.error("Logout failed");
+      },
+    });
   };
 
   return (
@@ -406,8 +512,7 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
           {profileOpen && (
             <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
               <div className="border-b border-slate-100 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-800">Admin User</p>
-                <p className="text-xs text-slate-500">admin@mobishop.bd</p>
+                <p className="text-sm font-semibold text-slate-800">The Admin Profile</p>
               </div>
 
               <div className="p-2">
@@ -419,13 +524,13 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
                   <Icon.User />
                   My Profile
                 </Link>
-
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                  disabled={isLoggingOut}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Icon.Logout />
-                  Logout
+                  {isLoggingOut ? "Logging out..." : "Logout"}
                 </button>
               </div>
             </div>
@@ -437,7 +542,7 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
 }
 // ── Dashboard Layout ──────────────────────────────────────────────────────────
 export default function Dashboard({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed]   = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (

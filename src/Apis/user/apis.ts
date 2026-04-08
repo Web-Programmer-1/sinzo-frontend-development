@@ -12,6 +12,12 @@ export const loginUser = (data: any) =>
 export const forgotPassword = (email: string) =>
   apiClient.post(userEndpoints.forgotPassword, { email });
 
+
+export const logoutUser = async () => {
+  const { data } = await apiClient.post(userEndpoints.logout);
+  return data;
+};
+
 // user
 export const getMe = async () => {
   const res = await apiClient.get("/users/me");

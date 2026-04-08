@@ -4,7 +4,7 @@ export const userEndpoints = {
   forgotPassword: "/users/forgot-password",
 
   me: "/users/me",
-
+  logout: "/users/logout",
   getAll: "/users",
   getById: (id: string) => `/users/${id}`,
 

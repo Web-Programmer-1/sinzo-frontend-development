@@ -561,19 +561,7 @@ const OrderDetails = ({ id }: OrderDetailsProps) => {
               </div>
             </div>
 
-            {/* Extra Info */}
-            <div className="rounded-3xl border border-black/10 bg-white shadow-[0_10px_35px_rgba(0,0,0,0.06)]">
-              <div className="border-b border-black/10 px-5 py-4 md:px-6">
-                <h2 className="text-xl font-semibold text-black">Additional Info</h2>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 px-5 py-5 md:px-6">
-                <InfoCard title="Receipt PDF" value={order.receiptPdfPath || "N/A"} />
-                <InfoCard title="IP Address" value={order.ipAddress || "N/A"} />
-                <InfoCard title="Device ID" value={order.deviceId || "N/A"} />
-                <InfoCard title="Guest ID" value={order.guestId || "N/A"} />
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -103,29 +103,8 @@ const NAV_ITEMS: NavItemType[] = [
     label: "My Orders",
     href: "/userDashboard/order",
   },
-  {
-    icon: <Icon.Category />,
-    label: "Category",
-    dropdown: [
-      { label: "Create Category",  icon: <Icon.Plus />, href: "/dashboard/category/create" },
-      { label: "All Category List", icon: <Icon.List />, href: "/dashboard/category/category-list" },
-    ],
-  },
-  {
-    icon: <Icon.Orders />,
-    label: "Orders",
-    href: "/dashboard/orders",
-  },
-  {
-    icon: <Icon.Customers />,
-    label: "Customers",
-    href: "/dashboard/customers",
-  },
-  {
-    icon: <Icon.Analytics />,
-    label: "Analytics",
-    href: "/dashboard/analytics",
-  },
+
+
   {
     icon: <Icon.Settings />,
     label: "Settings",

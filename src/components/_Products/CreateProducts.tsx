@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useCreateProduct } from "../../Apis/products/mutation";
 import { useGetAllCategories } from "../../Apis/category/queries";
+import { generateSlug } from "../../helper/GenerateSlug";
 
 /* ══════════════════════════════════════════════════════
    Constants
@@ -34,10 +35,10 @@ const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "28", "30", "32", "34", 
 
 const STEPS = [
   { id: 1, label: "Basic Info", icon: "📋" },
-  { id: 2, label: "Media",     icon: "🖼️" },
-  { id: 3, label: "Colors",    icon: "🎨" },
-  { id: 4, label: "Sizes",     icon: "📐" },
-  { id: 5, label: "Review",    icon: "✅" },
+  { id: 2, label: "Media", icon: "🖼️" },
+  { id: 3, label: "Colors", icon: "🎨" },
+  { id: 4, label: "Sizes", icon: "📐" },
+  { id: 5, label: "Review", icon: "✅" },
 ];
 
 /* ══════════════════════════════════════════════════════
@@ -178,13 +179,18 @@ export default function CreateProductForm() {
   const { mutate: createProduct } = useCreateProduct();
   // console.log("CreateProdust", createProduct)
   const { data: catRes } = useGetAllCategories({ limit: 100 });
-  const categories: any[] = catRes?.data|| [];
+  const categories: any[] = catRes?.data || [];
 
   console.log("Categories", categories)
 
   const {
-    register, handleSubmit, control, watch,
-    formState: { errors }, getValues,
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+    getValues,
   } = useForm<FormValues>({
     defaultValues: {
       title: "", slug: "", cardShortTitle: "", description: "",
@@ -193,8 +199,23 @@ export default function CreateProductForm() {
     },
   });
 
+  const watchTitle = watch("title");
+  const watchSlug = watch("slug");
+
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+
+
   const watchSizes = watch("sizes") || [];
   const watchSizeType = watch("sizeType");
+
+
+
+  useEffect(() => {
+    if (!isSlugManuallyEdited) {
+      setValue("slug", generateSlug(watchTitle || ""));
+    }
+  }, [watchTitle, isSlugManuallyEdited, setValue]);
+
 
   /* ── Handlers ── */
   const onCardImg = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -308,8 +329,8 @@ export default function CreateProductForm() {
                     step === s.id
                       ? "bg-stone-900 text-white shadow-sm"
                       : step > s.id
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-stone-100 text-stone-400 hover:text-stone-600",
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-stone-100 text-stone-400 hover:text-stone-600",
                   ].join(" ")}
                 >
                   <span>{step > s.id ? "✓" : s.icon}</span>
@@ -347,9 +368,20 @@ export default function CreateProductForm() {
                       />
                     </Field>
                   </div>
-                  <Field label="URL Slug" hint="auto if empty">
+                  <Field label="URL Slug" hint="auto from title">
                     <input
                       {...register("slug")}
+                      value={watchSlug || ""}
+                      onChange={(e) => {
+                        const value = generateSlug(e.target.value);
+                        setValue("slug", value);
+
+                        if (value.length === 0) {
+                          setIsSlugManuallyEdited(false);
+                        } else {
+                          setIsSlugManuallyEdited(true);
+                        }
+                      }}
                       className={inputCls()}
                       placeholder="drop-baggy-denim"
                     />

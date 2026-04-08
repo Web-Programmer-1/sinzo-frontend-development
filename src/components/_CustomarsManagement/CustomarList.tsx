@@ -1,5 +1,11 @@
+
+
+
+
+
 "use client";
 
+import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import Swal from "sweetalert2";
 import { toast } from "sonner";
@@ -12,6 +18,9 @@ import {
   Shield,
   ShieldBan,
   Loader2,
+  ChevronDown,
+  Check,
+  UserCog,
 } from "lucide-react";
 
 import { useGetAllUsers } from "../../Apis/user/queries";
@@ -19,6 +28,7 @@ import {
   useBlockUser,
   useDeleteUser,
   useUnblockUser,
+  useUpdateUser,
 } from "../../Apis/user/mutations";
 
 type TUser = {
@@ -38,6 +48,8 @@ type TUser = {
   updatedAt: string;
 };
 
+type TRole = "ADMIN" | "CUSTOMER";
+
 export default function CustomersManagementList() {
   const { data, isLoading, isError } = useGetAllUsers();
 
@@ -45,6 +57,13 @@ export default function CustomersManagementList() {
   const { mutate: blockUserMutation, isPending: isBlocking } = useBlockUser();
   const { mutate: unblockUserMutation, isPending: isUnblocking } =
     useUnblockUser();
+  const { mutate: updateUserMutation, isPending: isUpdatingUser } =
+    useUpdateUser();
+
+  const [openRoleDropdownId, setOpenRoleDropdownId] = useState<string | null>(
+    null
+  );
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, TRole>>({});
 
   const users: TUser[] = Array.isArray(data)
     ? data
@@ -103,7 +122,52 @@ export default function CustomersManagementList() {
     }
   };
 
-  const actionLoading = isDeleting || isBlocking || isUnblocking;
+  const handleRoleUpdate = async (user: TUser) => {
+    const nextRole = selectedRoles[user.id] || user.role;
+
+    if (nextRole === user.role) {
+      toast.info("Please select a different role first");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Update role?",
+      text: `${user.fullName || user.name} will be changed to ${nextRole}`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#0f172a",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, update role",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      background: "#ffffff",
+      color: "#0f172a",
+    });
+
+    if (!result.isConfirmed) return;
+
+    const formData = new FormData();
+    formData.append("role", nextRole);
+
+    updateUserMutation(
+      { id: user.id, data: formData },
+      {
+        onSuccess: () => {
+          toast.success("User role updated successfully");
+          setOpenRoleDropdownId(null);
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to update role");
+        },
+      }
+    );
+  };
+
+  const actionLoading =
+    isDeleting || isBlocking || isUnblocking || isUpdatingUser;
+
+  const getSelectedRole = (user: TUser): TRole =>
+    selectedRoles[user.id] || user.role;
 
   if (isLoading) {
     return <CustomersSkeleton />;
@@ -125,7 +189,8 @@ export default function CustomersManagementList() {
             Customers Management
           </h1>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Manage all registered users with block, unblock and delete actions.
+            Manage all registered users with block, unblock, role update and
+            delete actions.
           </p>
         </div>
 
@@ -149,6 +214,8 @@ export default function CustomersManagementList() {
           <div className="grid grid-cols-1 gap-4 lg:hidden">
             {users.map((user) => {
               const isBlocked = user.status === "BLOCKED";
+              const isRoleOpen = openRoleDropdownId === user.id;
+              const currentSelectedRole = getSelectedRole(user);
 
               return (
                 <div
@@ -192,7 +259,10 @@ export default function CustomersManagementList() {
                   </div>
 
                   <div className="mt-4 space-y-2.5">
-                    <InfoRow icon={<Mail className="h-4 w-4" />} text={user.email} />
+                    <InfoRow
+                      icon={<Mail className="h-4 w-4" />}
+                      text={user.email}
+                    />
                     <InfoRow
                       icon={<Phone className="h-4 w-4" />}
                       text={user.phone || "No phone added"}
@@ -200,18 +270,19 @@ export default function CustomersManagementList() {
                     <InfoRow
                       icon={<MapPin className="h-4 w-4" />}
                       text={
-                        [user.area, user.city, user.country].filter(Boolean).join(", ") ||
-                        "No address info"
+                        [user.area, user.city, user.country]
+                          .filter(Boolean)
+                          .join(", ") || "No address info"
                       }
                     />
                   </div>
 
-                  <div className="mt-5 flex items-center justify-between gap-3">
+                  <div className="mt-5 grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => handleToggleBlock(user)}
                       disabled={actionLoading}
-                      className={`relative inline-flex h-11 w-[78px] items-center rounded-full border px-1.5 transition-all duration-300 ${
+                      className={`relative inline-flex h-11 w-full items-center rounded-full border px-1.5 transition-all duration-300 ${
                         isBlocked
                           ? "border-rose-200 bg-rose-50"
                           : "border-emerald-200 bg-emerald-50"
@@ -221,7 +292,7 @@ export default function CustomersManagementList() {
                         className={`flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition-all duration-300 ${
                           isBlocked
                             ? "translate-x-0 bg-rose-500 text-white"
-                            : "translate-x-[34px] bg-emerald-500 text-white"
+                            : "translate-x-[calc(100%-2rem)] bg-emerald-500 text-white"
                         }`}
                       >
                         {actionLoading ? (
@@ -235,14 +306,79 @@ export default function CustomersManagementList() {
                     </button>
 
                     <button
-                      onClick={() => handleDelete(user)}
+                      type="button"
+                      onClick={() =>
+                        setOpenRoleDropdownId(isRoleOpen ? null : user.id)
+                      }
                       disabled={actionLoading}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
+                      <UserCog className="h-4 w-4" />
+                      Update Role
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isRoleOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
                   </div>
+
+                  {isRoleOpen && (
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Select Role
+                      </label>
+
+                      <select
+                        value={currentSelectedRole}
+                        onChange={(e) =>
+                          setSelectedRoles((prev) => ({
+                            ...prev,
+                            [user.id]: e.target.value as TRole,
+                          }))
+                        }
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-400"
+                      >
+                        <option value="CUSTOMER">CUSTOMER</option>
+                        <option value="ADMIN">ADMIN</option>
+                      </select>
+
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRoleUpdate(user)}
+                          disabled={
+                            actionLoading || currentSelectedRole === user.role
+                          }
+                          className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isUpdatingUser ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
+                          Save Role
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setOpenRoleDropdownId(null)}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => handleDelete(user)}
+                    disabled={actionLoading}
+                    className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
                 </div>
               );
             })}
@@ -278,9 +414,14 @@ export default function CustomersManagementList() {
                 <tbody className="divide-y divide-slate-100">
                   {users.map((user) => {
                     const isBlocked = user.status === "BLOCKED";
+                    const isRoleOpen = openRoleDropdownId === user.id;
+                    const currentSelectedRole = getSelectedRole(user);
 
                     return (
-                      <tr key={user.id} className="transition hover:bg-slate-50/70">
+                      <tr
+                        key={user.id}
+                        className="align-top transition hover:bg-slate-50/70"
+                      >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
@@ -331,48 +472,123 @@ export default function CustomersManagementList() {
 
                         <td className="px-6 py-4">
                           <p className="max-w-[240px] text-sm leading-6 text-slate-600">
-                            {[user.area, user.city, user.country].filter(Boolean).join(", ") ||
-                              "No address info"}
+                            {[user.area, user.city, user.country]
+                              .filter(Boolean)
+                              .join(", ") || "No address info"}
                           </p>
                         </td>
 
                         <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleBlock(user)}
-                              disabled={actionLoading}
-                              className={`relative inline-flex h-10 w-[72px] items-center rounded-full border px-1.5 transition-all duration-300 ${
-                                isBlocked
-                                  ? "border-rose-200 bg-rose-50"
-                                  : "border-emerald-200 bg-emerald-50"
-                              } ${actionLoading ? "cursor-not-allowed opacity-60" : ""}`}
-                            >
-                              <span
-                                className={`flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-all duration-300 ${
+                          <div className="flex flex-col items-end gap-3">
+                            <div className="flex items-center justify-end gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBlock(user)}
+                                disabled={actionLoading}
+                                className={`relative inline-flex h-10 w-[72px] items-center rounded-full border px-1.5 transition-all duration-300 ${
                                   isBlocked
-                                    ? "translate-x-0 bg-rose-500 text-white"
-                                    : "translate-x-[30px] bg-emerald-500 text-white"
+                                    ? "border-rose-200 bg-rose-50"
+                                    : "border-emerald-200 bg-emerald-50"
+                                } ${
+                                  actionLoading
+                                    ? "cursor-not-allowed opacity-60"
+                                    : ""
                                 }`}
                               >
-                                {actionLoading ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : isBlocked ? (
-                                  <ShieldBan className="h-4 w-4" />
-                                ) : (
-                                  <Shield className="h-4 w-4" />
-                                )}
-                              </span>
-                            </button>
+                                <span
+                                  className={`flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-all duration-300 ${
+                                    isBlocked
+                                      ? "translate-x-0 bg-rose-500 text-white"
+                                      : "translate-x-[30px] bg-emerald-500 text-white"
+                                  }`}
+                                >
+                                  {actionLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : isBlocked ? (
+                                    <ShieldBan className="h-4 w-4" />
+                                  ) : (
+                                    <Shield className="h-4 w-4" />
+                                  )}
+                                </span>
+                              </button>
 
-                            <button
-                              onClick={() => handleDelete(user)}
-                              disabled={actionLoading}
-                              className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOpenRoleDropdownId(
+                                    isRoleOpen ? null : user.id
+                                  )
+                                }
+                                disabled={actionLoading}
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <UserCog className="h-4 w-4" />
+                                Update Role
+                                <ChevronDown
+                                  className={`h-4 w-4 transition-transform duration-200 ${
+                                    isRoleOpen ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+
+                              <button
+                                onClick={() => handleDelete(user)}
+                                disabled={actionLoading}
+                                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </button>
+                            </div>
+
+                            {isRoleOpen && (
+                              <div className="w-[240px] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+                                <label className="mb-2 block text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                  Update User Role
+                                </label>
+
+                                <select
+                                  value={currentSelectedRole}
+                                  onChange={(e) =>
+                                    setSelectedRoles((prev) => ({
+                                      ...prev,
+                                      [user.id]: e.target.value as TRole,
+                                    }))
+                                  }
+                                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-400"
+                                >
+                                  <option value="CUSTOMER">CUSTOMER</option>
+                                  <option value="ADMIN">ADMIN</option>
+                                </select>
+
+                                <div className="mt-3 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRoleUpdate(user)}
+                                    disabled={
+                                      actionLoading ||
+                                      currentSelectedRole === user.role
+                                    }
+                                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {isUpdatingUser ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Check className="h-4 w-4" />
+                                    )}
+                                    Save
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenRoleDropdownId(null)}
+                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -392,7 +608,7 @@ function InfoRow({
   icon,
   text,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   text: string;
 }) {
   return (

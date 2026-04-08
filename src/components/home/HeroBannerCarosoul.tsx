@@ -1,69 +1,92 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Image from "next/image";
-
-/*
-  ─────────────────────────────────────────────────────
-  HeroBannerCarousel — Image-only version
-  ─────────────────────────────────────────────────────
-  ব্যবহার:
-  1. /public/banners/ ফোল্ডারে image গুলো রাখো
-  2. নিচের IMAGES array তে path + alt দাও
-  3. ব্যস — আর কিছু লাগবে না
-
-  Supported formats: .jpg .jpeg .png .webp .avif
-  Recommended size: 1200×480px (desktop) / 800×500px (mobile)
-  ─────────────────────────────────────────────────────
-*/
-
-const IMAGES = [
-  // { src: "/banners/slider1.png", alt: "Banner 1" },
-  { src: "/banners/cover.jpeg", alt: "Banner 2" },
-  { src: "/banners/cover1.png", alt: "Banner 2" },
-
-];
+import { useGetAllBanners } from "../../Apis/banner";
 
 const AUTO_PLAY_MS = 3000;
 const TRANSITION_MS = 700;
 
 export default function HeroBannerCarousel() {
-  const [current,    setCurrent]    = useState(0);
-  const [prev,       setPrev]       = useState<number | null>(null);
-  const [direction,  setDirection]  = useState<"next" | "prev">("next");
-  const [sliding,    setSliding]    = useState(false);
-  const [paused,     setPaused]     = useState(false);
-  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const total     = IMAGES.length;
+  const { data, isLoading } = useGetAllBanners();
 
-  const goTo = useCallback((idx: number, dir: "next" | "prev" = "next") => {
-    if (sliding) return;
-    const next = (idx + total) % total;
-    if (next === current) return;
-    setDirection(dir);
-    setPrev(current);
-    setSliding(true);
-    setCurrent(next);
-    setTimeout(() => {
-      setPrev(null);
-      setSliding(false);
-    }, TRANSITION_MS);
-  }, [sliding, current, total]);
+  const IMAGES = useMemo(() => {
+    const banners = data?.data ?? [];
 
-  const goNext = useCallback(() => goTo(current + 1, "next"), [current, goTo]);
-  const goPrev = useCallback(() => goTo(current - 1, "prev"), [current, goTo]);
+    return banners
+      .sort((a: { sortOrder: number }, b: { sortOrder: number }) => a.sortOrder - b.sortOrder)
+      .map((banner: { id: string; image: string; sortOrder: number }) => ({
+        src: banner.image,
+        alt: `Banner ${banner.sortOrder + 1}`,
+        id: banner.id,
+      }));
+  }, [data]);
+
+  const [current, setCurrent] = useState(0);
+  const [prev, setPrev] = useState<number | null>(null);
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [sliding, setSliding] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const total = IMAGES.length;
+
+  const goTo = useCallback(
+    (idx: number, dir: "next" | "prev" = "next") => {
+      if (sliding || total <= 1) return;
+
+      const next = (idx + total) % total;
+      if (next === current) return;
+
+      setDirection(dir);
+      setPrev(current);
+      setSliding(true);
+      setCurrent(next);
+
+      setTimeout(() => {
+        setPrev(null);
+        setSliding(false);
+      }, TRANSITION_MS);
+    },
+    [sliding, current, total]
+  );
+
+  const goNext = useCallback(() => {
+    if (total > 1) goTo(current + 1, "next");
+  }, [current, goTo, total]);
+
+  const goPrev = useCallback(() => {
+    if (total > 1) goTo(current - 1, "prev");
+  }, [current, goTo, total]);
+
+  useEffect(() => {
+    setCurrent(0);
+    setPrev(null);
+    setSliding(false);
+  }, [total]);
 
   // Auto-play
   useEffect(() => {
-    if (paused) { if (timerRef.current) clearInterval(timerRef.current); return; }
+    if (paused || total <= 1) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
+    }
+
     timerRef.current = setInterval(goNext, AUTO_PLAY_MS);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [paused, goNext]);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [paused, goNext, total]);
 
   // Touch/swipe support
   const touchStartX = useRef<number>(0);
-  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-  const onTouchEnd   = (e: React.TouchEvent) => {
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     if (Math.abs(dx) > 40) dx < 0 ? goNext() : goPrev();
   };
@@ -72,11 +95,22 @@ export default function HeroBannerCarousel() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") goNext();
-      if (e.key === "ArrowLeft")  goPrev();
+      if (e.key === "ArrowLeft") goPrev();
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full aspect-[16/6] rounded-xl bg-slate-100 animate-pulse" />
+    );
+  }
+
+  if (!IMAGES.length) {
+    return null;
+  }
 
   return (
     <>
@@ -92,13 +126,10 @@ export default function HeroBannerCarousel() {
         aria-label="Banner carousel"
         aria-roledescription="carousel"
       >
-        {/* ── Slides ── */}
         <div className="hbc-track">
-
-          {/* Previous slide (exits) */}
-          {prev !== null && (
+          {prev !== null && IMAGES[prev] && (
             <div
-              key={`prev-${prev}`}
+              key={`prev-${IMAGES[prev].id}`}
               className={`hbc-slide hbc-slide--exit hbc-slide--exit-${direction}`}
               aria-hidden="true"
             >
@@ -107,17 +138,18 @@ export default function HeroBannerCarousel() {
                 alt={IMAGES[prev].alt}
                 fill
                 sizes="(max-width: 768px) 100vw, 1200px"
-                style={{ objectFit: "contain", objectPosition: "center" }}
+                style={{ objectFit: "cover", objectPosition: "center" }}
                 priority={false}
                 draggable={false}
               />
             </div>
           )}
 
-          {/* Current slide (enters) */}
           <div
-            key={`curr-${current}`}
-            className={`hbc-slide hbc-slide--enter hbc-slide--enter-${direction} ${sliding ? "hbc-slide--entering" : "hbc-slide--entered"}`}
+            key={`curr-${IMAGES[current].id}`}
+            className={`hbc-slide hbc-slide--enter hbc-slide--enter-${direction} ${
+              sliding ? "hbc-slide--entering" : "hbc-slide--entered"
+            }`}
             aria-roledescription="slide"
             aria-label={`${current + 1} of ${total}: ${IMAGES[current].alt}`}
           >
@@ -133,7 +165,6 @@ export default function HeroBannerCarousel() {
           </div>
         </div>
 
-        {/* ── Prev / Next arrows ── */}
         {total > 1 && (
           <>
             <button
@@ -141,28 +172,46 @@ export default function HeroBannerCarousel() {
               onClick={goPrev}
               aria-label="Previous slide"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
+
             <button
               className="hbc-arrow hbc-arrow--right"
               onClick={goNext}
               aria-label="Next slide"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
           </>
         )}
 
-        {/* ── Dot indicators ── */}
         {total > 1 && (
           <div className="hbc-dots" role="tablist" aria-label="Slides">
             {IMAGES.map((img, i) => (
               <button
-                key={i}
+                key={img.id}
                 role="tab"
                 aria-selected={i === current}
                 aria-label={`Go to slide ${i + 1}: ${img.alt}`}
@@ -173,8 +222,7 @@ export default function HeroBannerCarousel() {
           </div>
         )}
 
-        {/* ── Progress bar ── */}
-        {!paused && (
+        {!paused && total > 1 && (
           <div className="hbc-progress-wrap">
             <div
               key={current}
@@ -188,7 +236,6 @@ export default function HeroBannerCarousel() {
   );
 }
 
-/* ─── CSS ─────────────────────────────────────────── */
 const CSS = (ms: number) => `
   .hbc-root {
     position: relative;
@@ -196,7 +243,6 @@ const CSS = (ms: number) => `
     border-radius: 12px;
     overflow: hidden;
     background: #111;
-    /* Aspect ratio: 16:6 desktop, 4:3 mobile */
     aspect-ratio: 16 / 6;
     user-select: none;
     -webkit-user-select: none;
@@ -208,13 +254,11 @@ const CSS = (ms: number) => `
     .hbc-root { aspect-ratio: 16 / 7; }
   }
 
-  /* ── Track ── */
   .hbc-track {
     position: absolute;
     inset: 0;
   }
 
-  /* ── Slide base ── */
   .hbc-slide {
     position: absolute;
     inset: 0;
@@ -222,7 +266,6 @@ const CSS = (ms: number) => `
     height: 100%;
   }
 
-  /* ── Enter animations ── */
   .hbc-slide--enter-next  { transform: translateX(100%); }
   .hbc-slide--enter-prev  { transform: translateX(-100%); }
   .hbc-slide--entering    {
@@ -231,7 +274,6 @@ const CSS = (ms: number) => `
   }
   .hbc-slide--entered     { transform: translateX(0); }
 
-  /* ── Exit animations ── */
   .hbc-slide--exit-next {
     transform: translateX(0);
     animation: hbc-exit-next ${ms}ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -250,7 +292,6 @@ const CSS = (ms: number) => `
     to   { transform: translateX(100%); }
   }
 
-  /* ── Arrows ── */
   .hbc-arrow {
     position: absolute;
     top: 50%;
@@ -281,7 +322,6 @@ const CSS = (ms: number) => `
     .hbc-arrow svg { width: 16px; height: 16px; }
   }
 
-  /* ── Dots ── */
   .hbc-dots {
     position: absolute;
     bottom: 12px;
@@ -316,7 +356,6 @@ const CSS = (ms: number) => `
     .hbc-dot--active { width: 16px; }
   }
 
-  /* ── Progress bar ── */
   .hbc-progress-wrap {
     position: absolute;
     bottom: 0; left: 0; right: 0;
