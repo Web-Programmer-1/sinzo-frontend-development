@@ -263,8 +263,8 @@ function ProductDetails({ product }: { product: ProductData }) {
   const allImages = Array.from(new Set(defaultImages.filter(Boolean)));
   const displayImages = activeVariant?.images?.[0]
     ? Array.from(
-        new Set([activeVariant.images[0], ...defaultImages].filter(Boolean)),
-      )
+      new Set([activeVariant.images[0], ...defaultImages].filter(Boolean)),
+    )
     : allImages;
 
   const handleColorSelect = (color: string) => {
@@ -421,11 +421,10 @@ function ProductDetails({ product }: { product: ProductData }) {
                       onClick={() =>
                         setSelectedSize((prev) => (prev === s ? "" : s))
                       }
-                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-                        selectedSize === s
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${selectedSize === s
                           ? "border-black bg-black text-white"
                           : "border-gray-300 hover:border-black"
-                      }`}
+                        }`}
                     >
                       {s}
                     </button>
@@ -449,11 +448,10 @@ function ProductDetails({ product }: { product: ProductData }) {
                       onClick={() => setSelectedColor(cv.color)}
                       aria-label={cv.color}
                       title={cv.color}
-                      className={`h-8 w-8 rounded-full border-2 transition ${
-                        selectedColor === cv.color
+                      className={`h-8 w-8 rounded-full border-2 transition ${selectedColor === cv.color
                           ? "scale-105 border-black"
                           : "border-gray-300"
-                      }`}
+                        }`}
                       style={{ background: cv.color.toLowerCase() }}
                     />
                   ))}
@@ -1630,7 +1628,7 @@ const CSS = `
   .pd-sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .pd-sec-title {font-size: 1.25rem; color: #111; font-weight: 700 }
   .rv-count { font-size: 0.78rem; color: #aaa; }
-  .pd-desc-txt { font-size: 0.90rem; line-height: 1.75; color: #555; white-space: pre-wrap; font-weight: 500 }
+.pd-desc-txt { font-size: 0.90rem; line-height: 1.75; color: #555; white-space: pre-wrap; font-weight: 500; word-break: break-word; overflow-wrap: break-word; }
   .rv-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .rv-write-btn { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border: 1.5px solid #111; border-radius: 20px; background: #fff; color: #111; font-size: 0.76rem; font-weight: 600; transition: all 0.15s; }
   .rv-write-btn:hover { background: #111; color: #fff; }

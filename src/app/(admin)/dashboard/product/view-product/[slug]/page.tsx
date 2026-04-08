@@ -58,7 +58,7 @@ export default function ProductDetailsPage() {
 
   const { data, isLoading, isError } = useGetSingleProduct(slug);
 
-  const response = data ;
+  const response = data;
   const product = response?.data;
 
   const allImages = useMemo(() => {
@@ -123,10 +123,9 @@ export default function ProductDetailsPage() {
         <div className="flex items-center gap-2">
           {product.badge && (
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                badgeStyleMap[product.badge] ||
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeStyleMap[product.badge] ||
                 "bg-slate-100 text-slate-700 ring-1 ring-slate-200"
-              }`}
+                }`}
             >
               {formatBadge(product.badge)}
             </span>
@@ -167,11 +166,10 @@ export default function ProductDetailsPage() {
                   key={`${img}-${index}`}
                   type="button"
                   onClick={() => setActiveImage(img)}
-                  className={`relative aspect-square overflow-hidden rounded-2xl border transition ${
-                    displayImage === img
+                  className={`relative aspect-square overflow-hidden rounded-2xl border transition ${displayImage === img
                       ? "border-slate-900 ring-2 ring-slate-200"
                       : "border-slate-200 hover:border-slate-300"
-                  }`}
+                    }`}
                 >
                   <Image
                     src={img}
@@ -203,9 +201,9 @@ export default function ProductDetailsPage() {
               </div>
             </div>
 
-            <p className="mt-5 text-sm leading-7 text-slate-600">
-              {product.description || "No description available."}
-            </p>
+     <p className="mt-5 text-sm leading-7 text-slate-600" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>
+  {product.description || "No description available."}
+</p>
 
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
@@ -381,10 +379,9 @@ export default function ProductDetailsPage() {
 
                   <div className="flex items-center justify-between">
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        badgeStyleMap[item.badge || ""] ||
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeStyleMap[item.badge || ""] ||
                         "bg-slate-100 text-slate-700 ring-1 ring-slate-200"
-                      }`}
+                        }`}
                     >
                       {formatBadge(item.badge)}
                     </span>

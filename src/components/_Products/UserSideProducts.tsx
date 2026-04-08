@@ -859,9 +859,13 @@ function ProductCard({
             {product.title.split(" ").slice(0, 2).join(" ") +
               (product.title.split(" ").length > 2 ? "..." : "")}
           </p>
-          <span style={C.catTag}>
-            {product.cardShortTitle?.slice(0, 25)}...
-          </span>
+     {product.cardShortTitle && (
+  <span style={C.catTag}>
+    {product.cardShortTitle.length > 25
+      ? product.cardShortTitle.slice(0, 25) + "..."
+      : product.cardShortTitle}
+  </span>
+)}
 
           <div style={C.priceRow}>
             <span style={C.price}>৳ {product.price.toLocaleString()}</span>
