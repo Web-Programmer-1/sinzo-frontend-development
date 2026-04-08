@@ -548,16 +548,6 @@ const OrderDetails = ({ id }: OrderDetailsProps) => {
                   </p>
                 </div>
 
-                {order.courierRawResponse && (
-                  <div className="rounded-2xl border border-dashed border-black/10 bg-gray-50 p-4">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">
-                      Courier Raw Response
-                    </p>
-                    <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-2xl bg-white p-4 text-xs leading-6 text-gray-700">
-{JSON.stringify(order.courierRawResponse, null, 2)}
-                    </pre>
-                  </div>
-                )}
               </div>
             </div>
 

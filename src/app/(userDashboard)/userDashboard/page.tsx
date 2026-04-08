@@ -1,9 +1,7 @@
-import React from 'react'
+import CustomerDashboard from "../../../components/_USERDASHBOARD/overview/CustomarDashboardOverview";
 
-export default function UserDashboard() {
+export default function CustomarOverviewPage() {
   return (
-    <div>
-      <h1>This iS UserDashboard</h1>
-    </div>
+    <CustomerDashboard></CustomerDashboard>
   )
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DropdownItem = {
@@ -96,7 +97,7 @@ const NAV_ITEMS: NavItemType[] = [
   {
     icon: <Icon.Dashboard />,
     label: "Dashboard",
-    href: "/dashboard",
+    href: "/userDashboard",
   },
   {
     icon: <Icon.Orders />,
@@ -106,9 +107,9 @@ const NAV_ITEMS: NavItemType[] = [
 
 
   {
-    icon: <Icon.Settings />,
-    label: "Settings",
-    href: "/dashboard/settings",
+    icon: <Icon.List />,
+    label: "Profile",
+    href: "/userDashboard/profile",
   },
 ];
 
@@ -140,7 +141,7 @@ function NavItem({ item, collapsed, onClose }: NavItemProps) {
     : item.dropdown?.some((d) => pathname === d.href) ?? false;
 
   const base = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200";
-  const active = "bg-violet-600 text-white shadow-lg shadow-violet-200";
+  const active = "bg-black text-white shadow-lg shadow-violet-200";
   const inactive = "text-slate-500 hover:bg-slate-100 hover:text-slate-800";
 
   // Dropdown variant
@@ -172,7 +173,7 @@ function NavItem({ item, collapsed, onClose }: NavItemProps) {
                 onClick={onClose}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all
                   ${pathname === d.href
-                    ? "bg-violet-50 text-violet-700"
+                    ? "bg-violet-50 text-black"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
               >
@@ -217,14 +218,23 @@ function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
     >
       {/* Logo */}
       <div className={`flex items-center gap-2.5 h-16 px-4 border-b border-slate-100 flex-shrink-0 ${isCollapsed ? "justify-center" : ""}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-          M
-        </div>
+
         {!isCollapsed && (
-          <div className="min-w-0">
-            <p className="font-bold text-slate-800 text-sm leading-tight truncate">MobiShop</p>
-            <p className="text-xs text-slate-400 leading-tight">Admin Panel</p>
-          </div>
+          <Link 
+          href={"/"}
+          >
+          
+                      <Image 
+              alt="Logo"
+              width={120}
+              height={40}
+              className="object-contain"
+            src={"/bg-remove-logo.png"}
+            >
+
+
+            </Image>
+          </Link>
         )}
         {mobile && (
           <button onClick={onClose} className="ml-auto p-1 rounded-lg text-slate-400 hover:bg-slate-100">
@@ -248,12 +258,12 @@ function Sidebar({ collapsed, mobile = false, onClose }: SidebarProps) {
       {/* User */}
       <div className={`border-t border-slate-100 p-3 flex-shrink-0 ${isCollapsed ? "flex justify-center" : ""}`}>
         {isCollapsed ? (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-black to-black flex items-center justify-center text-white font-bold text-xs">
             A
           </div>
         ) : (
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-black to-black flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
               A
             </div>
             <div className="min-w-0">
@@ -297,7 +307,7 @@ function Topbar({ collapsed, onToggleSidebar, onOpenMobile }: TopbarProps) {
           <Icon.Bell />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs cursor-pointer">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-black to-black flex items-center justify-center text-white font-bold text-xs cursor-pointer">
           A
         </div>
       </div>

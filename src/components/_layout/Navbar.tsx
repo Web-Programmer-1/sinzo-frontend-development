@@ -26,7 +26,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/" },
-  { label: "Shop", href: "/shop" },
+  { label: "Shop", href: "/product" },
   { label: "About Us", href: "/about" },
   { label: "Contact Us", href: "/contact" },
 ];
@@ -929,14 +929,14 @@ export default function Navbar() {
               <SearchIcon />
             </button>
 
-            <button
+            {/* <button
               className={`zaman-icon-btn wishlist${wishlistActive ? " active" : ""}`}
               onClick={() => setWishlistActive((w) => !w)}
               aria-label={wishlistActive ? "Remove from wishlist" : "Add to wishlist"}
               aria-pressed={wishlistActive}
             >
               <HeartIcon filled={wishlistActive} />
-            </button>
+            </button> */}
 
             {isAdmin && (
               <Link href="/dashboard" className="zaman-admin-btn" title="Admin Dashboard">
