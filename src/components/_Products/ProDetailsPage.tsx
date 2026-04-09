@@ -17,6 +17,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAddToCart } from "../../Apis/cart";
 import { toast } from "sonner";
+import ProductImageGallery from "./ProductZoom";
 
 /* ══════════════════════════════════════════════════════
    Types
@@ -145,7 +146,7 @@ const REACTION_EMOJI: Record<string, string> = {
 ══════════════════════════════════════════════════════ */
 export default function ProductDetailsPage({ slug }: { slug: string }) {
   const { data: res, isLoading, isError } = useGetSingleProduct(slug);
-  const product: ProductData | undefined = res?.data as any;
+  const product: ProductData | undefined = (res as { data?: ProductData } | undefined)?.data;
 
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !product)
@@ -284,81 +285,15 @@ function ProductDetails({ product }: { product: ProductData }) {
         {/* ══ HERO: IMAGE + INFO ══ */}
         <div className="pd-hero">
           {/* LEFT: Gallery */}
-          <div className="pd-gallery">
-            {displayImages.length > 1 && (
-              <div className="pd-thumbs-col">
-                {displayImages.map((img, i) => (
-                  <button
-                    key={i}
-                    className={`pd-thumb${i === activeImg ? " pd-thumb--on" : ""}`}
-                    onClick={() => setActiveImg(i)}
-                  >
-                    <Image
-                      src={img}
-                      alt="Product thumbnail"
-                      width={60}
-                      height={60}
-                      className="pd-thumb-img"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
 
-            <div className="pd-main-img-wrap">
-              {product.badge && (
-                <span
-                  className="pd-badge"
-                  style={{ background: BADGE_BG[product.badge] }}
-                >
-                  {BADGE_LABELS[product.badge]}
-                </span>
-              )}
-              {soldOut && <div className="pd-sold-out">Out of Stock</div>}
+              <ProductImageGallery
+            images={displayImages}
+            activeIndex={activeImg}
+            onImageChange={setActiveImg}
+            productName={product.title}
+          />
 
-              <div className="pd-main-img-box">
-                {displayImages[activeImg] ? (
-                  <Image
-                    src={displayImages[activeImg]}
-                    alt={product.title}
-                    fill
-                    className="pd-main-img"
-                    sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 40vw"
-                  />
-                ) : (
-                  <PlaceholderImg />
-                )}
 
-                {displayImages.length > 1 && (
-                  <>
-                    <button
-                      className="pd-arrow pd-arrow--prev"
-                      onClick={goPrev}
-                      aria-label="Previous"
-                    >
-                      <ChevronLeft />
-                    </button>
-                    <button
-                      className="pd-arrow pd-arrow--next"
-                      onClick={goNext}
-                      aria-label="Next"
-                    >
-                      <ChevronRight />
-                    </button>
-                    <div className="pd-dots">
-                      {displayImages.map((_, i) => (
-                        <button
-                          key={i}
-                          className={`pd-dot${i === activeImg ? " pd-dot--on" : ""}`}
-                          onClick={() => setActiveImg(i)}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* RIGHT: Info */}
           <div className="pd-info">

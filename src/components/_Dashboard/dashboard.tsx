@@ -355,16 +355,25 @@ function Sidebar({ collapsed, mobile = false, onClose, user }: SidebarProps) {
     >
       {/* Logo */}
       <div className={`flex items-center gap-2.5 h-16 px-4 border-b border-slate-100 flex-shrink-0 ${isCollapsed ? "justify-center" : ""}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br bg-black flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-          M
-        </div>
 
-        {!isCollapsed && (
-          <div className="min-w-0">
-            <p className="font-bold text-slate-800 text-sm leading-tight truncate">MobiShop</p>
-            <p className="text-xs text-slate-400 leading-tight">Admin Panel</p>
-          </div>
-        )}
+
+                  <Link 
+          href={"/"}
+          >
+          
+                      <Image 
+              alt="Logo"
+              width={120}
+              height={40}
+              className="object-contain"
+            src={"/bg-remove-logo.png"}
+            >
+
+
+            </Image>
+          </Link>
+   
+
 
         {mobile && (
           <button onClick={onClose} className="ml-auto p-1 rounded-lg text-slate-400 hover:bg-slate-100">

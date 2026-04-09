@@ -58,7 +58,7 @@ export default function ProductDetailsPage() {
 
   const { data, isLoading, isError } = useGetSingleProduct(slug);
 
-  const response = data;
+  const response = data as { data?: any } | undefined;
   const product = response?.data;
 
   const allImages = useMemo(() => {

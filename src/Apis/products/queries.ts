@@ -18,6 +18,7 @@ export const useGetAllProducts = (
     ...options,
   });
 };
+
 export const useGetSingleProduct = (slug: string) => {
   return useQuery({
     queryKey: productKeys.detail(slug),
@@ -25,4 +26,3 @@ export const useGetSingleProduct = (slug: string) => {
     enabled: !!slug,
   });
 };
-

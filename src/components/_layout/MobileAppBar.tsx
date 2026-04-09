@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useGetMyCart } from "../../Apis/cart";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type TabId = "home" | "shop" | "favorites" | "cart" | "profile";
 
@@ -12,31 +13,33 @@ interface MobileNavProps {
   onTabChange?: (tab: TabId) => void;
 }
 
+
 const tabs: { id: TabId; label: string; icon: (active: boolean) => any }[] = [
-  {
-    id: "home",
-    label: "Home",
-    icon: (active) => (
-      <svg
-        width="22"
-        height="22"
-        viewBox="0 0 24 24"
-        fill={active ? "#111" : "none"}
+{
+  id: "home",
+  label: "Home",
+  icon: (active) => (
+    
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill={active ? "#111" : "none"}
+      stroke="#111"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+      <path
+        d="M9 21V12h6v9"
+        fill={active ? "#fff" : "none"}
         stroke="#111"
         strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
-        <path
-          d="M9 21V12h6v9"
-          fill={active ? "#fff" : "none"}
-          stroke="#111"
-          strokeWidth="1.8"
-        />
-      </svg>
-    ),
-  },
+      />
+    </svg>
+  ),
+},
   {
     id: "shop",
     label: "Shop",
@@ -129,9 +132,13 @@ const tabs: { id: TabId; label: string; icon: (active: boolean) => any }[] = [
 ];
 
 export default function MobileNav({
+
+  
   activeTab = "home",
   onTabChange,
 }: MobileNavProps) {
+
+  const router = useRouter();
   const [active, setActive] = useState<TabId>(activeTab);
   const [cartBounce, setCartBounce] = useState(false);
   const [ripple, setRipple] = useState<{ id: TabId; key: number } | null>(null);
@@ -159,11 +166,17 @@ export default function MobileNav({
     }
   }, [cartCount]);
 
+
+
   const handleTab = (id: TabId) => {
     setActive(id);
     onTabChange?.(id);
     rippleKey.current++;
     setRipple({ id, key: rippleKey.current });
+
+      if (id === "home") {
+    router.push("/");
+  }
     setTimeout(() => setRipple(null), 500);
   };
 
@@ -364,6 +377,12 @@ export default function MobileNav({
       </nav>
     </>
   );
+
+
+  
+
+
+
 }
 
 
