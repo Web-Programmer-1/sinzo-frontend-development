@@ -1,3 +1,5 @@
+import { updateOrderCustomerInfoApis } from "./apis";
+
 const ORDER_ENDPOINTS = {
   PLACE_ORDER: "/order/place-order",
   MY_ORDERS: "/order/my-orders",
@@ -10,6 +12,11 @@ const ORDER_ENDPOINTS = {
   CUSTOMER_RANKING: "/order/customer-ranking",
 
   DELETE_ORDER: (id: string) => `/order/${id}`,
+
+    updateOrderCustomerInfoApis: (orderId: string) => 
+    `/order/${orderId}/customer-info`,
+
+
 };
 
 export default ORDER_ENDPOINTS;

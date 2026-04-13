@@ -195,10 +195,8 @@ const NAV_ITEMS: NavItemType[] = [
   {
     icon: <Icon.List />,
     label: "Steadfast",
-    dropdown: [
-      { label: "Create Steadfast", icon: <Icon.Plus />, href: "/dashboard/steadfast/add" },
-      { label: "Steadfast List", icon: <Icon.List />, href: "/dashboard/steadfast/list" },
-    ],
+      href: "/dashboard/steadfast/list",
+
   },
 
 

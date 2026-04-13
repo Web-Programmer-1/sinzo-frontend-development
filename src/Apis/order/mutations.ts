@@ -1,11 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   deleteOrder,
+  OrderCustomerInfoResponse,
   placeOrder,
+  UpdateCustomerInfoPayload,
   updateOrderStatus,
   updatePaymentStatus,
 } from "./apis";
 import { orderKeys } from "./keys";
+import { toast } from "sonner";
+import { apiClient } from "../../lib/axios/apiClient";
+import ORDER_ENDPOINTS from "./endpoints";
 
 export const usePlaceOrder = () => {
   const queryClient = useQueryClient();
@@ -75,4 +80,24 @@ export const useDeleteOrder = () => {
       ]);
     },
   });
+};
+
+
+
+
+
+
+
+
+
+
+export const updateOrderCustomerInfo = async (
+  orderId: string,
+  payload: UpdateCustomerInfoPayload
+): Promise<OrderCustomerInfoResponse> => {
+  const response = await apiClient.patch(
+    ORDER_ENDPOINTS.updateOrderCustomerInfoApis(orderId),
+    payload
+  );
+  return response.data.data;
 };

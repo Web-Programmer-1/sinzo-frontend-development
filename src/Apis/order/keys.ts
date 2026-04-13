@@ -20,4 +20,10 @@ export const orderKeys = {
 
   customerRanking: (params?: Record<string, any>) =>
     [...orderKeys.all, "customer-ranking", params] as const,
+
+
+    customerInfo: (orderId: string) => 
+    [...orderKeys.all, 'customer-info', orderId] as const,
+
+
 };

@@ -49,6 +49,40 @@ export type TAdminOrdersParams = {
 
 
 
+
+
+
+
+export interface UpdateCustomerInfoPayload {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+  country?: string;
+  city?: string;
+  area?: string;
+  addressLine?: string;
+  deliveryArea?: 'inside_dhaka' | 'outside_dhaka' | 'courier';
+  note?: string;
+}
+
+export interface OrderCustomerInfoResponse {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  country: string;
+  city: string;
+  area: string;
+  addressLine: string;
+  deliveryArea: string;
+  note: string | null;
+  courierStatus: string;
+  updatedAt: string;
+}
+
+
+
+
 export type TCustomerBadge = "NORMAL" | "VIP" | "LOYAL";
 
 export type TCustomerRankingItem = {
@@ -181,3 +215,27 @@ export const deleteOrder = async (id: string) => {
   const res = await apiClient.delete(ORDER_ENDPOINTS.DELETE_ORDER(id));
   return res.data;
 }
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+  export const updateOrderCustomerInfoApis = async (
+    orderId: string,
+    payload: UpdateCustomerInfoPayload
+  ): Promise<OrderCustomerInfoResponse> => {
+    const response = await apiClient.patch(
+      ORDER_ENDPOINTS.updateOrderCustomerInfoApis(orderId),
+      payload
+    );
+    return response.data.data;
+  };
