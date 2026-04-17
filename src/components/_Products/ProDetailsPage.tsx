@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useGetSingleProduct } from "../../Apis/products/queries";
 import {
   TReactionType,
@@ -13,7 +13,6 @@ import {
   useRelatedProducts,
   useUpdateReview,
 } from "../../Apis/review";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAddToCart } from "../../Apis/cart";
 import { toast } from "sonner";
@@ -35,6 +34,8 @@ interface RelatedProduct {
   badge: string | null;
   stock: number;
   totalReviews: number;
+  averageRating?: number;
+  cardShortTitle?: string;
 }
 interface ProductData {
   id: string;
@@ -83,7 +84,7 @@ interface Review {
 }
 
 /* ══════════════════════════════════════════════════════
-   Constants
+   Constants (module-level — never recreated)
 ══════════════════════════════════════════════════════ */
 const BADGE_BG: Record<string, string> = {
   SALE: "#e53e3e",
@@ -99,40 +100,6 @@ const BADGE_LABELS: Record<string, string> = {
   OUT_OF_STOCK: "Out of Stock",
   NEW: "New",
 };
-const COLOR_MAP: Record<string, string> = {
-  BLACK: "#111",
-  WHITE: "#f5f5f5",
-  BLUE: "#2563eb",
-  RED: "#e53e3e",
-  GREEN: "#1a7f4b",
-  GREY: "#888",
-  GRAY: "#888",
-  BROWN: "#92400e",
-  NAVY: "#1e3a5f",
-  PINK: "#ec4899",
-  YELLOW: "#f5a623",
-  PURPLE: "#7c3aed",
-  ORANGE: "#e07b39",
-  Black: "#111",
-  White: "#f5f5f5",
-  Blue: "#2563eb",
-  Red: "#e53e3e",
-  Green: "#1a7f4b",
-  Grey: "#888",
-  Brown: "#92400e",
-  Navy: "#1e3a5f",
-  Pink: "#ec4899",
-  Yellow: "#f5a623",
-  Purple: "#7c3aed",
-  Orange: "#e07b39",
-  Chalk: "#e0dcd6",
-  "Pure Grey": "#b4b4b4",
-};
-
-const toColorLabel = (c: string) =>
-  c.charAt(0).toUpperCase() + c.slice(1).toLowerCase();
-
-const AV_COLORS = ["#c4a882", "#9ab5a0", "#a4b2c4", "#c4a4b4", "#b4a4c4"];
 
 const REACTION_EMOJI: Record<string, string> = {
   like: "👍",
@@ -141,1204 +108,12 @@ const REACTION_EMOJI: Record<string, string> = {
   haha: "😄",
 };
 
-/* ══════════════════════════════════════════════════════
-   Export
-══════════════════════════════════════════════════════ */
-export default function ProductDetailsPage({ slug }: { slug: string }) {
-  const { data: res, isLoading, isError } = useGetSingleProduct(slug);
-  const product: ProductData | undefined = (res as { data?: ProductData } | undefined)?.data;
+const AV_COLORS = ["#c4a882", "#9ab5a0", "#a4b2c4", "#c4a4b4", "#b4a4c4"];
 
-  if (isLoading) return <LoadingSkeleton />;
-  if (isError || !product)
-    return (
-      <div style={{ textAlign: "center", padding: "60px 20px", color: "#999" }}>
-        Product not found.
-      </div>
-    );
-  return <ProductDetails product={product} />;
-}
+const DRAG_THRESHOLD = 50;
 
 /* ══════════════════════════════════════════════════════
-   Main Component
-══════════════════════════════════════════════════════ */
-function ProductDetails({ product }: { product: ProductData }) {
-
-
-  const colorVariants: ColorVariant[] =
-    (product.colorVariants as ColorVariant[]) || [];
-  const defaultImages = [
-    product.productCardImage,
-    ...product.galleryImages,
-  ].filter(Boolean);
-
-  const [selectedColor, setSelectedColor] = useState<string>(
-    colorVariants.length > 0 ? colorVariants[0].color : "",
-  );
-
-  const { data: relatedRes } = useRelatedProducts(product.id, 8);
-  const relatedProducts: RelatedProduct[] = relatedRes?.data || [];
-
-  const relatedSliderRef = useRef<HTMLDivElement | null>(null);
-
-  const scrollRelated = (direction: "left" | "right") => {
-    if (!relatedSliderRef.current) return;
-
-    const scrollAmount = 320;
-    relatedSliderRef.current.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
-  };
-
-  const router = useRouter();
-  const { mutate: addToCart, isPending } = useAddToCart();
-
-  const handleAddToCart = () => {
-    if (soldOut) return;
-
-    if (product.sizes?.length > 0 && !selectedSize) {
-      toast.error("Select size first");
-      return;
-    }
-
-    if (product.colorVariants?.length > 0 && !selectedColor) {
-      toast.error("Select color first");
-      return;
-    }
-
-    addToCart(
-      {
-        productId: product.id,
-        quantity,
-        selectedColor: selectedColor || undefined,
-        selectedSize: selectedSize || undefined,
-      },
-      {
-        onSuccess: (res: any) => {
-          toast.success(res?.message || "Added to cart");
-          router.push("/cart/my-cart");
-
-        },
-        onError: (err: any) => {
-          toast.error(err?.response?.data?.message || "Failed to add cart");
-        },
-      },
-    );
-  };
-
-  const handleBuyNow = () => {
-    if (soldOut) return;
-
-    if (product.sizes?.length > 0 && !selectedSize) {
-      toast.error("Select size first");
-      return;
-    }
-
-    if (product.colorVariants?.length > 0 && !selectedColor) {
-      toast.error("Select color first");
-      return;
-    }
-
-    addToCart(
-      {
-        productId: product.id,
-        quantity,
-        selectedColor: selectedColor || undefined,
-        selectedSize: selectedSize || undefined,
-      },
-      {
-        onSuccess: () => {
-          router.push("/cart");
-        },
-      },
-    );
-  };
-
-  const [activeImg, setActiveImg] = useState(0);
-  const [selectedSize, setSelectedSize] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
-  const soldOut = product.stock === 0;
-
-  const activeVariant = colorVariants.find((v) => v.color === selectedColor);
-  const allImages = Array.from(new Set(defaultImages.filter(Boolean)));
-  const displayImages = activeVariant?.images?.[0]
-    ? Array.from(
-      new Set([activeVariant.images[0], ...defaultImages].filter(Boolean)),
-    )
-    : allImages;
-
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-  };
-
-  const goPrev = () =>
-    setActiveImg((i) => (i - 1 + allImages.length) % allImages.length);
-  const goNext = () => setActiveImg((i) => (i + 1) % allImages.length);
-
-  const maxQty = Math.min(product.stock, 10);
-
-  return (
-    <>
-      <style>{CSS}</style>
-      <div className="pd-wrap">
-        {/* ══ HERO: IMAGE + INFO ══ */}
-        <div className="pd-hero">
-          {/* LEFT: Gallery */}
-
-              <ProductImageGallery
-            images={displayImages}
-            activeIndex={activeImg}
-            onImageChange={setActiveImg}
-            productName={product.title}
-          />
-
-
-
-          {/* RIGHT: Info */}
-          <div className="pd-info">
-            <div className="pd-brand">
-              <div className="pd-brand-icon">
-                {product.category.thumbnailImage ? (
-                  <img src={product.category.thumbnailImage} alt="" />
-                ) : (
-                  <span className="font-semibold text-5xl">
-                    {product.category.title.charAt(0)}
-                  </span>
-                )}
-              </div>
-              <span className="pd-brand-name">{product.category.title}</span>
-            </div>
-
-            <h1 className="pd-title">{product.title}</h1>
-
-            <div className="pd-rating-row">
-              <StarsRow rating={product.averageRating} />
-              <span className="pd-rating-count">({product.totalReviews})</span>
-            </div>
-
-            <div className="pd-price">৳{product.price.toLocaleString()}</div>
-
-            <div className="pd-divider" />
-
-            {product.sizes?.length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="text-[15px] font-medium text-gray-700">
-                    Size ({product.sizeType})
-                  </p>
-
-                  {(product.sizeGuideImage || product.sizeGuideData) && (
-                    <button
-                      type="button"
-                      onClick={() => setSizeGuideOpen(true)}
-                      className="group relative inline-flex items-center justify-center rounded-full p-[2px] shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] active:scale-95"
-                    >
-                      <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-black via-gray-300 to-white opacity-80 transition-opacity duration-300 group-hover:opacity-100"></span>
-
-                      <span className="relative flex items-center gap-2 rounded-full bg-gradient-to-b from-white to-gray-100 px-4 py-1.5 text-[13px] font-bold tracking-wide text-gray-800 transition-colors duration-300 group-hover:bg-white group-hover:text-black">
-                        <span className="transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-110">
-                          <span className="h-4 w-4 text-gray-700 group-hover:text-black">
-                            <RulerIcon />
-                          </span>
-                        </span>
-                        Size Guide
-                      </span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {product.sizes.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() =>
-                        setSelectedSize((prev) => (prev === s ? "" : s))
-                      }
-                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${selectedSize === s
-                          ? "border-black bg-black text-white"
-                          : "border-gray-300 hover:border-black"
-                        }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* COLOR */}
-            {product.colorVariants?.length > 0 && (
-              <div>
-                <div className="mb-2 mt-2 flex items-center justify-between gap-3">
-                  <p className="text-[15px] font-medium text-gray-700">Color</p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {product.colorVariants.map((cv: any) => (
-                    <button
-                      key={cv.color}
-                      type="button"
-                      onClick={() => setSelectedColor(cv.color)}
-                      aria-label={cv.color}
-                      title={cv.color}
-                      className={`h-8 w-8 rounded-full border-2 transition ${selectedColor === cv.color
-                          ? "scale-105 border-black"
-                          : "border-gray-300"
-                        }`}
-                      style={{ background: cv.color.toLowerCase() }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="pd-cta-row"></div>
-
-            <div className="pd-cta-row">
-              <div className="pd-qty-wrap">
-                <select
-                  className="pd-qty-sel"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  disabled={soldOut || isPending}
-                >
-                  {Array.from({ length: maxQty || 1 }, (_, i) => i + 1).map(
-                    (n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ),
-                  )}
-                </select>
-                <ChevronDownIcon />
-              </div>
-
-              <button
-                className="pd-cart-btn"
-                disabled={soldOut || isPending}
-                onClick={handleAddToCart}
-              >
-                <CartIcon />
-                {soldOut
-                  ? "Out of Stock"
-                  : isPending
-                    ? "Adding..."
-                    : "Add to cart"}
-              </button>
-            </div>
-
-            <button
-              className="pd-buy-btn"
-              disabled={soldOut || isPending}
-              onClick={handleBuyNow}
-            >
-              {soldOut
-                ? "Unavailable"
-                : isPending
-                  ? "Processing..."
-                  : "Buy it now"}
-            </button>
-
-            <div className="pd-delivery">
-              <TruckIcon />
-              <span>Free delivery on orders over ৳20,000</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ══ DESCRIPTION ══ */}
-        {product.description && (
-          <div className="pd-section">
-            <div className="pd-sec-head">
-              <span className="pd-sec-title">Description</span>
-            </div>
-            <p className="pd-desc-txt">{product.description}</p>
-          </div>
-        )}
-
-        {/* ══ REVIEWS ══ */}
-        <ReviewsSection
-          productId={product.id}
-          averageRating={product.averageRating}
-        />
-      </div>
-
-      {relatedProducts.length > 0 && (
-        <div className="pd-section">
-          <div className="pd-sec-head pd-sec-head--rel">
-            <span className="pd-sec-title">You may also like</span>
-
-            <div className="pd-rel-nav">
-              <button
-                className="pd-rel-arrow"
-                onClick={() => scrollRelated("left")}
-                aria-label="Scroll left"
-              >
-                <ChevronLeft />
-              </button>
-              <button
-                className="pd-rel-arrow"
-                onClick={() => scrollRelated("right")}
-                aria-label="Scroll right"
-              >
-                <ChevronRight />
-              </button>
-            </div>
-          </div>
-
-          <div className="pd-rel-slider" ref={relatedSliderRef}>
-            {relatedProducts.map((rp: any) => (
-              <a
-                key={rp.id}
-                href={`/product/${rp.slug}`}
-                className="pd-rel-card"
-              >
-                <div className="pd-rel-img">
-                  {rp.productCardImage ? (
-                    <img src={rp.productCardImage} alt={rp.title} />
-                  ) : (
-                    <div className="pd-rel-img-empty" />
-                  )}
-
-                  {rp.badge && (
-                    <span
-                      className="pd-rel-badge"
-                      style={{ background: BADGE_BG[rp.badge] }}
-                    >
-                      {BADGE_LABELS[rp.badge]}
-                    </span>
-                  )}
-                </div>
-
-                <div className="pd-rel-info">
-                  <p className="pd-rel-name">{rp.title}</p>
-
-                  {rp.cardShortTitle && (
-                    <p className="pd-rel-short">{rp.cardShortTitle}</p>
-                  )}
-
-                  <p className="pd-rel-price">৳{rp.price.toLocaleString()}</p>
-
-                  {rp.averageRating > 0 && (
-                    <div className="pd-rel-rating">
-                      <StarsRow rating={rp.averageRating} small />
-                      <span className="pd-rel-reviews">
-                        ({rp.totalReviews})
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {sizeGuideOpen && (
-        <SizeGuideModal
-          image={product.sizeGuideImage}
-          data={product.sizeGuideData}
-          onClose={() => setSizeGuideOpen(false)}
-        />
-      )}
-    </>
-  );
-}
-
-/* ══════════════════════════════════════════════════════
-   Reviews Section
-══════════════════════════════════════════════════════ */
-function ReviewsSection({
-  productId,
-  averageRating,
-}: {
-  productId: string;
-  averageRating: number;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [sort, setSort] = useState<string | undefined>(undefined);
-  const [showWriteForm, setShowWriteForm] = useState(false);
-  const [newRating, setNewRating] = useState(5);
-  const [newComment, setNewComment] = useState("");
-
-  const invalidateInput = { productId };
-
-  const { data: reviewsRes, isLoading } = useGetReviewsByProduct(
-    productId,
-    sort,
-  );
-
-  type CompatibleReviewType = TReview | Review;
-  const reviews: CompatibleReviewType[] =
-    (reviewsRes?.data as CompatibleReviewType[]) || [];
-
-  const { mutate: createReview, isPending: isCreating } =
-    useCreateReview(invalidateInput);
-
-  const handleSubmitReview = () => {
-    if (!newComment.trim()) return;
-
-    createReview(
-      {
-        productId,
-        rating: newRating,
-        comment: newComment.trim(),
-      },
-      {
-        onSuccess: () => {
-          setNewComment("");
-          setNewRating(5);
-          setShowWriteForm(false);
-          toast.success("Review posted successfully");
-        },
-        onError: (error: any) => {
-          const statusCode =
-            error?.response?.status || error?.response?.data?.error?.statusCode;
-
-          const message =
-            error?.response?.data?.message || "Failed to post review";
-
-          if (statusCode === 401) {
-            toast.error("আগে login করুন, তারপর review দিন");
-            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-            return;
-          }
-
-          toast.error(message);
-        },
-      },
-    );
-  };
-
-  return (
-    <div className="pd-section">
-      <div className="pd-sec-head">
-        <span className="pd-sec-title">Reviews</span>
-        <StarsRow rating={averageRating} />
-        <span className="rv-count">({reviews.length})</span>
-      </div>
-
-      <div className="rv-controls">
-        <button
-          className="rv-write-btn"
-          onClick={() => setShowWriteForm((v) => !v)}
-        >
-          <PenIcon />
-          Write a review
-        </button>
-      </div>
-
-      {showWriteForm && (
-        <div className="rv-write-form">
-          <p className="rv-write-label">Your Rating</p>
-          <div className="rv-star-picker">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`rv-star-btn${n <= newRating ? " rv-star-btn--on" : ""}`}
-                onClick={() => setNewRating(n)}
-                aria-label={`${n} star`}
-              >
-                <StarIcon filled={n <= newRating} />
-              </button>
-            ))}
-          </div>
-
-          <textarea
-            className="rv-write-ta"
-            placeholder="Share your thoughts about this product…"
-            rows={3}
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
-
-          <div className="rv-write-btns">
-            <button
-              type="button"
-              className="rv-cancel-btn"
-              onClick={() => setShowWriteForm(false)}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              className="rv-send-btn"
-              onClick={handleSubmitReview}
-              disabled={isCreating || !newComment.trim()}
-            >
-              {isCreating ? "Posting…" : "Post Review"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="rv-loading">
-          {[1, 2, 3].map((i) => (
-            <ReviewSkeleton key={i} />
-          ))}
-        </div>
-      ) : reviews.length === 0 ? (
-        <div className="rv-empty">
-          <EmptyStarIcon />
-          <p>No reviews yet. Be the first to review!</p>
-        </div>
-      ) : (
-        <div className="rv-list">
-          {reviews.map((r) => (
-            <ReviewCard key={r.id} review={r as Review} productId={productId} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-/* ══════════════════════════════════════════════════════
-   Review Card
-══════════════════════════════════════════════════════ */
-function ReviewCard({
-  review,
-  productId,
-}: {
-  review: Review;
-  productId: string;
-}) {
-  const [replyOpen, setReplyOpen] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [showReplies, setShowReplies] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editComment, setEditComment] = useState(review.comment);
-  const [editRating, setEditRating] = useState(review.rating);
-  const [showReactionPanel, setShowReactionPanel] = useState(false);
-
-  const invalidateInput = { productId };
-
-  const { mutate: addReply, isPending: isReplying } =
-    useAddReplyToReview(invalidateInput);
-  const { mutate: updateReview, isPending: isUpdating } =
-    useUpdateReview(invalidateInput);
-  const { mutate: deleteReview, isPending: isDeleting } =
-    useDeleteReview(invalidateInput);
-  const { mutate: reactToReview } = useReactToReview(invalidateInput);
-
-  const avBg = AV_COLORS[review.user.name.charCodeAt(0) % AV_COLORS.length];
-  const initials = review.user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  const timeAgo = (iso: string) => {
-    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (diff < 60) return "just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return new Date(iso).toLocaleDateString("en-BD", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const totalReactions =
-    review.reactions.like +
-    review.reactions.love +
-    review.reactions.care +
-    review.reactions.haha;
-
-  const handleReply = () => {
-    if (!replyText.trim()) return;
-
-    addReply(
-      {
-        reviewId: review.id,
-        payload: {
-          action: "ADD_REPLY",
-          message: replyText.trim(),
-        },
-      },
-      {
-        onSuccess: () => {
-          setReplyText("");
-          setReplyOpen(false);
-          setShowReplies(true);
-        },
-      },
-    );
-  };
-
-  const handleUpdate = () => {
-    updateReview(
-      {
-        reviewId: review.id,
-        payload: { rating: editRating, comment: editComment.trim() },
-      },
-      { onSuccess: () => setEditOpen(false) },
-    );
-  };
-
-  const handleDelete = () => {
-    if (!confirm("Delete this review?")) return;
-    deleteReview(review.id);
-  };
-
-  const handleReact = (type: "like" | "love" | "care" | "haha") => {
-    reactToReview({
-      reviewId: review.id,
-      payload: {
-        action: "REACTION",
-        reactionType: type.toUpperCase() as TReactionType,
-      },
-    });
-    setShowReactionPanel(false);
-  };
-
-  return (
-    <div className="rv-card">
-      <div className="rv-top">
-        <div className="rv-av" style={{ background: avBg }}>
-          {review.user.profileImage ? (
-            <img src={review.user.profileImage} alt="" />
-          ) : (
-            <span>{initials}</span>
-          )}
-        </div>
-        <div className="rv-meta">
-          <div className="rv-meta-row">
-            <span className="rv-name">{review.user.name}</span>
-            <span className="rv-when">{timeAgo(review.createdAt)}</span>
-          </div>
-          <StarsRow rating={review.rating} small />
-        </div>
-        <div className="rv-owner-acts">
-          <button
-            className="rv-icon-btn"
-            title="Edit"
-            onClick={() => setEditOpen((v) => !v)}
-          >
-            <PenIcon size={12} />
-          </button>
-          <button
-            className="rv-icon-btn rv-icon-btn--del"
-            title="Delete"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            <TrashIcon />
-          </button>
-        </div>
-      </div>
-
-      {editOpen ? (
-        <div className="rv-edit-form">
-          <div className="rv-star-picker">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                className={`rv-star-btn${n <= editRating ? " rv-star-btn--on" : ""}`}
-                onClick={() => setEditRating(n)}
-              >
-                <StarIcon filled={n <= editRating} />
-              </button>
-            ))}
-          </div>
-          <textarea
-            className="rv-write-ta"
-            rows={2}
-            value={editComment}
-            onChange={(e) => setEditComment(e.target.value)}
-          />
-          <div className="rv-write-btns">
-            <button
-              className="rv-cancel-btn"
-              onClick={() => setEditOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="rv-send-btn"
-              onClick={handleUpdate}
-              disabled={isUpdating}
-            >
-              {isUpdating ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p className="rv-txt">{review.comment}</p>
-      )}
-
-      {totalReactions > 0 && (
-        <div className="rv-reaction-summary">
-          {(["like", "love", "care", "haha"] as const)
-            .filter((k) => review.reactions[k] > 0)
-            .map((k) => (
-              <span key={k} className="rv-reaction-chip">
-                {REACTION_EMOJI[k]} {review.reactions[k]}
-              </span>
-            ))}
-        </div>
-      )}
-
-      <div className="rv-acts">
-        <div className="rv-react-wrap">
-          <button
-            className="rv-action-pill"
-            onClick={() => setShowReactionPanel((v) => !v)}
-          >
-            👍 React
-          </button>
-          {showReactionPanel && (
-            <div className="rv-reaction-panel">
-              {(["like", "love", "care", "haha"] as const).map((k) => (
-                <button
-                  key={k}
-                  className="rv-emoji-btn"
-                  onClick={() => handleReact(k)}
-                  title={k}
-                >
-                  {REACTION_EMOJI[k]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <button
-          className="rv-action-pill"
-          onClick={() => setReplyOpen((v) => !v)}
-        >
-          <ReplyIcon /> Reply
-        </button>
-        {review.replies.length > 0 && (
-          <button
-            className="rv-action-pill rv-action-pill--ghost"
-            onClick={() => setShowReplies((v) => !v)}
-          >
-            <BubbleIcon />
-            {showReplies ? "Hide" : `${review.replies.length}`} replies
-          </button>
-        )}
-      </div>
-
-      {replyOpen && (
-        <div className="rv-reply-box">
-          <textarea
-            className="rv-reply-ta"
-            placeholder="Write a reply…"
-            rows={2}
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-          />
-          <div className="rv-reply-row">
-            <button
-              className="rv-cancel-btn"
-              onClick={() => setReplyOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="rv-send-btn"
-              onClick={handleReply}
-              disabled={isReplying || !replyText.trim()}
-            >
-              {isReplying ? "Sending…" : "Send"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showReplies &&
-        review.replies.map((rep: any) => (
-          <div key={rep.replyId} className="rv-reply-item">
-            <div
-              className="rv-av rv-av--sm"
-              style={{
-                background:
-                  AV_COLORS[rep.userName.charCodeAt(0) % AV_COLORS.length],
-              }}
-            >
-              {rep.userImage ? (
-                <img src={rep.userImage} alt={rep.userName} />
-              ) : (
-                <span>{rep.userName.charAt(0).toUpperCase()}</span>
-              )}
-            </div>
-
-            <div className="rv-reply-body">
-              <div className="rv-meta-row">
-                <span className="rv-name">{rep.userName}</span>
-                <span className="rv-when">{timeAgo(rep.createdAt)}</span>
-              </div>
-              <p className="rv-txt">{rep.message}</p>
-            </div>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════
-   Size Guide Modal
-══════════════════════════════════════════════════════ */
-function SizeGuideModal({
-  image,
-  data,
-  onClose,
-}: {
-  image: string | null;
-  data: Record<string, string> | null;
-  onClose: () => void;
-}) {
-  return (
-    <div className="sg-bd" onClick={onClose}>
-      <div className="sg-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="sg-head">
-          <span className="sg-title">Size Guide</span>
-          <button className="sg-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className="sg-body">
-          {image && <img src={image} alt="Size guide" className="sg-img" />}
-          {data && (
-            <div style={{ overflowX: "auto" }}>
-              <table className="sg-tbl">
-                <thead>
-                  <tr>
-                    {Object.keys(data).map((k) => (
-                      <th key={k}>{k}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    {Object.values(data).map((v, i) => (
-                      <td key={i}>{v}</td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-              <p className="sg-note">* All measurements in inches</p>
-            </div>
-          )}
-          {!image && !data && (
-            <p
-              style={{
-                color: "#aaa",
-                textAlign: "center",
-                padding: "20px 0",
-                fontSize: "0.86rem",
-              }}
-            >
-              No size guide available.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════
-   UI Helpers
-══════════════════════════════════════════════════════ */
-function StarsRow({ rating, small }: { rating: number; small?: boolean }) {
-  const s = small ? 12 : 15;
-  return (
-    <div style={{ display: "flex", gap: 1 }}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <svg
-          key={i}
-          width={s}
-          height={s}
-          viewBox="0 0 24 24"
-          fill={i <= Math.round(rating) ? "#f5a623" : "none"}
-          stroke="#f5a623"
-          strokeWidth="1.8"
-        >
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      ))}
-    </div>
-  );
-}
-function StarIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill={filled ? "#f5a623" : "none"}
-      stroke="#f5a623"
-      strokeWidth="1.8"
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  );
-}
-function ReviewSkeleton() {
-  return (
-    <div className="rv-skeleton">
-      <div className="rv-sk-av" />
-      <div
-        style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}
-      >
-        <div className="rv-sk-line" style={{ width: "40%" }} />
-        <div className="rv-sk-line" style={{ width: "80%" }} />
-        <div className="rv-sk-line" style={{ width: "60%" }} />
-      </div>
-    </div>
-  );
-}
-function PlaceholderImg() {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <svg
-        width="32"
-        height="32"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#ccc"
-        strokeWidth="1.5"
-      >
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <circle cx="8.5" cy="8.5" r="1.5" />
-        <polyline points="21 15 16 10 5 21" />
-      </svg>
-    </div>
-  );
-}
-function ChevronLeft() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  );
-}
-function ChevronRight() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-function ChevronDownIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ pointerEvents: "none" }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-function CartIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-  );
-}
-function TruckIcon() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <rect x="1" y="3" width="15" height="13" />
-      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-      <circle cx="5.5" cy="18.5" r="2.5" />
-      <circle cx="18.5" cy="18.5" r="2.5" />
-    </svg>
-  );
-}
-function RulerIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 12h20M2 12l4-4M2 12l4 4M22 12l-4-4M22 12l-4 4M7 12v2M12 12v3M17 12v2" />
-    </svg>
-  );
-}
-function PenIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-function TrashIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14H6L5 6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-      <path d="M9 6V4h6v2" />
-    </svg>
-  );
-}
-function ReplyIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 17 4 12 9 7" />
-      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-    </svg>
-  );
-}
-function BubbleIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-function EmptyStarIcon() {
-  return (
-    <svg
-      width="36"
-      height="36"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#ddd"
-      strokeWidth="1.4"
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  );
-}
-function LoadingSkeleton() {
-  return (
-    <>
-      <style>{`@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}.sk{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:sk 1.4s infinite;border-radius:6px}`}</style>
-      <div style={{ background: "#fff" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "48% 1fr" }}>
-          <div className="sk" style={{ aspectRatio: "0.85/1" }} />
-          <div
-            style={{
-              padding: "16px 14px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 11,
-            }}
-          >
-            {[50, 85, 55, 40, 70, 45, 90].map((w, i) => (
-              <div
-                key={i}
-                className="sk"
-                style={{ height: 13, width: `${w}%` }}
-              />
-            ))}
-          </div>
-        </div>
-        <div
-          className="sk"
-          style={{ height: 46, margin: "10px 14px", borderRadius: 10 }}
-        />
-      </div>
-    </>
-  );
-}
-
-/* ══════════════════════════════════════════════════════
-   CSS (unchanged from original)
+   CSS — module-level, injected ONCE
 ══════════════════════════════════════════════════════ */
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display&display=swap');
@@ -1347,10 +122,6 @@ const CSS = `
   button { cursor: pointer;  }
   a { text-decoration: none; color: inherit; }
   img { display: block; }
-
-
-
-
 
   .pd-sec-head--rel {
   justify-content: space-between;
@@ -1481,13 +252,7 @@ const CSS = `
   color: #888;
 }
 
-
-
-
-
-
   .pd-wrap {
-    
     background: #f5f5f5;
     min-height: 100dvh;
     color: #1a1a1a;
@@ -1563,7 +328,7 @@ const CSS = `
   .pd-sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .pd-sec-title {font-size: 1.25rem; color: #111; font-weight: 700 }
   .rv-count { font-size: 0.78rem; color: #aaa; }
-.pd-desc-txt { font-size: 0.90rem; line-height: 1.75; color: #555; white-space: pre-wrap; font-weight: 500; word-break: break-word; overflow-wrap: break-word; }
+  .pd-desc-txt { font-size: 0.90rem; line-height: 1.75; color: #555; white-space: pre-wrap; font-weight: 500; word-break: break-word; overflow-wrap: break-word; }
   .rv-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .rv-write-btn { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border: 1.5px solid #111; border-radius: 20px; background: #fff; color: #111; font-size: 0.76rem; font-weight: 600; transition: all 0.15s; }
   .rv-write-btn:hover { background: #111; color: #fff; }
@@ -1623,15 +388,6 @@ const CSS = `
   @keyframes sk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   .rv-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 0; color: #bbb; font-size: 0.84rem; }
   .pd-rel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .pd-rel-card { border-radius: 10px; overflow: hidden; background: #f5f4f1; transition: transform 0.18s, box-shadow 0.18s; display: block; }
-  .pd-rel-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
-  .pd-rel-img { position: relative; aspect-ratio: 1/1; overflow: hidden; background: #edeae5; }
-  .pd-rel-img img { width: 100%; height: 100%; object-fit: cover; }
-  .pd-rel-img-empty { width: 100%; height: 100%; background: #e8e5e0; }
-  .pd-rel-badge { position: absolute; top: 5px; left: 5px; padding: 2px 5px; border-radius: 4px; font-size: 0.54rem; font-weight: 700; color: #fff; }
-  .pd-rel-info { padding: 8px 10px 10px; }
-  .pd-rel-name { font-size: 0.76rem; font-weight: 600; color: #111; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pd-rel-price { font-size: 0.8rem; font-weight: 600; color: #111; }
   .sg-bd { position: fixed; inset: 0; background: rgba(0,0,0,0.46); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; }
   .sg-sheet { background: #fff; width: 100%; max-width: 520px; border-radius: 18px 18px 0 0; max-height: 80vh; overflow-y: auto; }
   .sg-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid #f0f0f0; }
@@ -1704,3 +460,1187 @@ const CSS = `
     .pd-arrow { width: 36px; height: 36px; }
   }
 `;
+
+/* ══════════════════════════════════════════════════════
+   Inject CSS once at module level (SSR-safe)
+══════════════════════════════════════════════════════ */
+if (typeof document !== "undefined") {
+  if (!document.getElementById("__pd-styles__")) {
+    const tag = document.createElement("style");
+    tag.id = "__pd-styles__";
+    tag.textContent = CSS;
+    document.head.appendChild(tag);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   Export
+══════════════════════════════════════════════════════ */
+export default function ProductDetailsPage({ slug }: { slug: string }) {
+  const { data: res, isLoading, isError } = useGetSingleProduct(slug);
+  const product: ProductData | undefined = (res as { data?: ProductData } | undefined)?.data;
+
+  if (isLoading) return <LoadingSkeleton />;
+  if (isError || !product)
+    return (
+      <div style={{ textAlign: "center", padding: "60px 20px", color: "#999" }}>
+        Product not found.
+      </div>
+    );
+  return <ProductDetails product={product} />;
+}
+
+/* ══════════════════════════════════════════════════════
+   Main Component
+══════════════════════════════════════════════════════ */
+function ProductDetails({ product }: { product: ProductData }) {
+  const colorVariants: ColorVariant[] = product.colorVariants ?? [];
+
+  const [selectedColor, setSelectedColor] = useState<string>(
+    colorVariants.length > 0 ? colorVariants[0].color : "",
+  );
+  const [activeImg, setActiveImg] = useState(0);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+
+  const relatedSliderRef = useRef<HTMLDivElement | null>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+
+  const { data: relatedRes } = useRelatedProducts(product.id, 8);
+  const relatedProducts: RelatedProduct[] = relatedRes?.data ?? [];
+
+  const router = useRouter();
+  const { mutate: addToCart, isPending } = useAddToCart();
+
+  // ── Derived values (memoized) ────────────────────
+  const soldOut = product.stock === 0;
+  const maxQty = useMemo(() => Math.min(product.stock, 10), [product.stock]);
+
+  const activeVariant = useMemo(
+    () => colorVariants.find((v) => v.color === selectedColor),
+    [colorVariants, selectedColor],
+  );
+
+  const displayImages = useMemo(() => {
+    const base = [product.productCardImage, ...product.galleryImages].filter(Boolean);
+    if (activeVariant?.images?.[0]) {
+      return Array.from(new Set([activeVariant.images[0], ...base].filter(Boolean)));
+    }
+    return Array.from(new Set(base));
+  }, [activeVariant, product.productCardImage, product.galleryImages]);
+
+  // ── Shared cart payload ──────────────────────────
+  const cartPayload = useMemo(
+    () => ({
+      productId: product.id,
+      quantity,
+      selectedColor: selectedColor || undefined,
+      selectedSize: selectedSize || undefined,
+    }),
+    [product.id, quantity, selectedColor, selectedSize],
+  );
+
+  // ── Validation ───────────────────────────────────
+  const validateSelection = useCallback((): boolean => {
+    if (product.sizes?.length > 0 && !selectedSize) {
+      toast.error("Select size first");
+      return false;
+    }
+    if (product.colorVariants?.length > 0 && !selectedColor) {
+      toast.error("Select color first");
+      return false;
+    }
+    return true;
+  }, [product.sizes, product.colorVariants, selectedSize, selectedColor]);
+
+  // ── Cart handlers ────────────────────────────────
+  const handleAddToCart = useCallback(() => {
+    if (soldOut || !validateSelection()) return;
+    addToCart(cartPayload, {
+      onSuccess: (res: any) => {
+        toast.success(res?.message || "Added to cart");
+        router.push("/cart/my-cart");
+      },
+      onError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to add cart");
+      },
+    });
+  }, [soldOut, validateSelection, addToCart, cartPayload, router]);
+
+  const handleBuyNow = useCallback(() => {
+    if (soldOut || !validateSelection()) return;
+    addToCart(cartPayload, {
+      onSuccess: () => router.push("/cart"),
+    });
+  }, [soldOut, validateSelection, addToCart, cartPayload, router]);
+
+  // ── Color / related slider ───────────────────────
+  const handleColorSelect = useCallback((color: string) => setSelectedColor(color), []);
+
+  const scrollRelated = useCallback((direction: "left" | "right") => {
+    relatedSliderRef.current?.scrollBy({
+      left: direction === "left" ? -320 : 320,
+      behavior: "smooth",
+    });
+  }, []);
+
+  // ── Drag / swipe handlers ────────────────────────
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    setStartX(e.pageX);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => setIsDragging(false), []);
+
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging) return;
+      const diff = startX - e.pageX;
+      if (Math.abs(diff) > DRAG_THRESHOLD) {
+        setActiveImg((prev) =>
+          diff > 0
+            ? (prev + 1) % displayImages.length
+            : (prev - 1 + displayImages.length) % displayImages.length,
+        );
+      }
+      setIsDragging(false);
+    },
+    [isDragging, startX, displayImages.length],
+  );
+
+  const handleMouseMove = useCallback((_e: React.MouseEvent) => {}, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setIsDragging(true);
+    setStartX(e.touches[0].pageX);
+  }, []);
+
+  const handleTouchMove = useCallback((_e: React.TouchEvent) => {}, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!isDragging) return;
+      const diff = startX - e.changedTouches[0].pageX;
+      if (Math.abs(diff) > DRAG_THRESHOLD) {
+        setActiveImg((prev) =>
+          diff > 0
+            ? (prev + 1) % displayImages.length
+            : (prev - 1 + displayImages.length) % displayImages.length,
+        );
+      }
+      setIsDragging(false);
+    },
+    [isDragging, startX, displayImages.length],
+  );
+
+  // ── Size guide toggle ────────────────────────────
+  const openSizeGuide = useCallback(() => setSizeGuideOpen(true), []);
+  const closeSizeGuide = useCallback(() => setSizeGuideOpen(false), []);
+
+  return (
+    <>
+      <div className="pd-wrap">
+        {/* ══ HERO: IMAGE + INFO ══ */}
+        <div className="pd-hero">
+          {/* LEFT: Gallery */}
+          <ProductImageGallery
+            images={displayImages}
+            activeIndex={activeImg}
+            onImageChange={setActiveImg}
+            productName={product.title}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            galleryRef={galleryRef}
+          />
+
+          {/* RIGHT: Info */}
+          <div className="pd-info">
+            <div className="pd-brand">
+              <div className="pd-brand-icon">
+                {product.category.thumbnailImage ? (
+                  <img
+                    src={product.category.thumbnailImage}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span className="font-semibold text-5xl">
+                    {product.category.title.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <span className="pd-brand-name">{product.category.title}</span>
+            </div>
+
+            <h1 className="pd-title">{product.title}</h1>
+
+            <div className="pd-rating-row">
+              <StarsRow rating={product.averageRating} />
+              <span className="pd-rating-count">({product.totalReviews})</span>
+            </div>
+
+            <div className="pd-price">৳{product.price.toLocaleString()}</div>
+
+            <div className="pd-divider" />
+
+            {product.sizes?.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-[15px] font-medium text-gray-700">
+                    Size ({product.sizeType})
+                  </p>
+
+                  {(product.sizeGuideImage || product.sizeGuideData) && (
+                    <button
+                      type="button"
+                      onClick={openSizeGuide}
+                      className="group relative inline-flex items-center justify-center rounded-full p-[2px] shadow-[0_4px_10px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] active:scale-95"
+                    >
+                      <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-black via-gray-300 to-white opacity-80 transition-opacity duration-300 group-hover:opacity-100"></span>
+                      <span className="relative flex items-center gap-2 rounded-full bg-gradient-to-b from-white to-gray-100 px-4 py-1.5 text-[13px] font-bold tracking-wide text-gray-800 transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                        <span className="transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-110">
+                          <span className="h-4 w-4 text-gray-700 group-hover:text-black">
+                            <RulerIcon />
+                          </span>
+                        </span>
+                        Size Guide
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSelectedSize((prev) => (prev === s ? "" : s))}
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                        selectedSize === s
+                          ? "border-black bg-black text-white"
+                          : "border-gray-300 hover:border-black"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* COLOR */}
+            {product.colorVariants?.length > 0 && (
+              <div>
+                <div className="mb-2 mt-2 flex items-center justify-between gap-3">
+                  <p className="text-[15px] font-medium text-gray-700">Color</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {product.colorVariants.map((cv) => (
+                    <button
+                      key={cv.color}
+                      type="button"
+                      onClick={() => handleColorSelect(cv.color)}
+                      aria-label={cv.color}
+                      title={cv.color}
+                      className={`h-8 w-8 rounded-full border-2 transition ${
+                        selectedColor === cv.color
+                          ? "scale-105 border-black"
+                          : "border-gray-300"
+                      }`}
+                      style={{ background: cv.color.toLowerCase() }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="pd-cta-row" />
+
+            <div className="pd-cta-row">
+              <div className="pd-qty-wrap">
+                <select
+                  className="pd-qty-sel"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  disabled={soldOut || isPending}
+                >
+                  {Array.from({ length: maxQty || 1 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon />
+              </div>
+
+              <button
+                className="pd-cart-btn"
+                disabled={soldOut || isPending}
+                onClick={handleAddToCart}
+              >
+                <CartIcon />
+                {soldOut ? "Out of Stock" : isPending ? "Adding..." : "Add to cart"}
+              </button>
+            </div>
+
+            <button
+              className="pd-buy-btn"
+              disabled={soldOut || isPending}
+              onClick={handleBuyNow}
+            >
+              {soldOut ? "Unavailable" : isPending ? "Processing..." : "Buy it now"}
+            </button>
+
+            <div className="pd-delivery">
+              <TruckIcon />
+              <span>Free delivery on orders over ৳20,000</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ══ DESCRIPTION ══ */}
+        {product.description && (
+          <div className="pd-section">
+            <div className="pd-sec-head">
+              <span className="pd-sec-title">Description</span>
+            </div>
+            <p className="pd-desc-txt">{product.description}</p>
+          </div>
+        )}
+
+        {/* ══ REVIEWS ══ */}
+        <ReviewsSection productId={product.id} averageRating={product.averageRating} />
+      </div>
+
+      {relatedProducts.length > 0 && (
+        <div className="pd-section">
+          <div className="pd-sec-head pd-sec-head--rel">
+            <span className="pd-sec-title">You may also like</span>
+            <div className="pd-rel-nav">
+              <button
+                className="pd-rel-arrow"
+                onClick={() => scrollRelated("left")}
+                aria-label="Scroll left"
+              >
+                <ChevronLeft />
+              </button>
+              <button
+                className="pd-rel-arrow"
+                onClick={() => scrollRelated("right")}
+                aria-label="Scroll right"
+              >
+                <ChevronRight />
+              </button>
+            </div>
+          </div>
+
+          <div className="pd-rel-slider" ref={relatedSliderRef}>
+            {relatedProducts.map((rp) => (
+              <RelatedProductCard key={rp.id} product={rp} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sizeGuideOpen && (
+        <SizeGuideModal
+          image={product.sizeGuideImage}
+          data={product.sizeGuideData}
+          onClose={closeSizeGuide}
+        />
+      )}
+    </>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   Related Product Card — memoized to prevent re-render
+   when parent state (qty, color, etc.) changes
+══════════════════════════════════════════════════════ */
+const RelatedProductCard = memo(function RelatedProductCard({
+  product: rp,
+}: {
+  product: RelatedProduct;
+}) {
+  return (
+    <a href={`/product/${rp.slug}`} className="pd-rel-card">
+      <div className="pd-rel-img">
+        {rp.productCardImage ? (
+          <img src={rp.productCardImage} alt={rp.title} loading="lazy" decoding="async" />
+        ) : (
+          <div className="pd-rel-img-empty" />
+        )}
+        {rp.badge && (
+          <span className="pd-rel-badge" style={{ background: BADGE_BG[rp.badge] }}>
+            {BADGE_LABELS[rp.badge]}
+          </span>
+        )}
+      </div>
+      <div className="pd-rel-info">
+        <p className="pd-rel-name">{rp.title}</p>
+        {rp.cardShortTitle && <p className="pd-rel-short">{rp.cardShortTitle}</p>}
+        <p className="pd-rel-price">৳{rp.price.toLocaleString()}</p>
+        {rp.averageRating && rp.averageRating > 0 && (
+          <div className="pd-rel-rating">
+            <StarsRow rating={rp.averageRating} small />
+            <span className="pd-rel-reviews">({rp.totalReviews})</span>
+          </div>
+        )}
+      </div>
+    </a>
+  );
+});
+
+/* ══════════════════════════════════════════════════════
+   Reviews Section — memoized
+══════════════════════════════════════════════════════ */
+const ReviewsSection = memo(function ReviewsSection({
+  productId,
+  averageRating,
+}: {
+  productId: string;
+  averageRating: number;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [sort, setSort] = useState<string | undefined>(undefined);
+  const [showWriteForm, setShowWriteForm] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+
+  const invalidateInput = useMemo(() => ({ productId }), [productId]);
+
+  const { data: reviewsRes, isLoading } = useGetReviewsByProduct(productId, sort);
+
+  type CompatibleReviewType = TReview | Review;
+  const reviews: CompatibleReviewType[] = (reviewsRes?.data as CompatibleReviewType[]) ?? [];
+
+  const { mutate: createReview, isPending: isCreating } = useCreateReview(invalidateInput);
+
+  const toggleWriteForm = useCallback(() => setShowWriteForm((v) => !v), []);
+
+  const handleSubmitReview = useCallback(() => {
+    if (!newComment.trim()) return;
+    createReview(
+      { productId, rating: newRating, comment: newComment.trim() },
+      {
+        onSuccess: () => {
+          setNewComment("");
+          setNewRating(5);
+          setShowWriteForm(false);
+          toast.success("Review posted successfully");
+        },
+        onError: (error: any) => {
+          const statusCode =
+            error?.response?.status || error?.response?.data?.error?.statusCode;
+          const message = error?.response?.data?.message || "Failed to post review";
+          if (statusCode === 401) {
+            toast.error("আগে login করুন, তারপর review দিন");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+          }
+          toast.error(message);
+        },
+      },
+    );
+  }, [newComment, newRating, productId, createReview, router, pathname]);
+
+  return (
+    <div className="pd-section">
+      <div className="pd-sec-head">
+        <span className="pd-sec-title">Reviews</span>
+        <StarsRow rating={averageRating} />
+        <span className="rv-count">({reviews.length})</span>
+      </div>
+
+      <div className="rv-controls">
+        <button className="rv-write-btn" onClick={toggleWriteForm}>
+          <PenIcon />
+          Write a review
+        </button>
+      </div>
+
+      {showWriteForm && (
+        <div className="rv-write-form">
+          <p className="rv-write-label">Your Rating</p>
+          <div className="rv-star-picker">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`rv-star-btn${n <= newRating ? " rv-star-btn--on" : ""}`}
+                onClick={() => setNewRating(n)}
+                aria-label={`${n} star`}
+              >
+                <StarIcon filled={n <= newRating} />
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="rv-write-ta"
+            placeholder="Share your thoughts about this product…"
+            rows={3}
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+          />
+          <div className="rv-write-btns">
+            <button type="button" className="rv-cancel-btn" onClick={toggleWriteForm}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rv-send-btn"
+              onClick={handleSubmitReview}
+              disabled={isCreating || !newComment.trim()}
+            >
+              {isCreating ? "Posting…" : "Post Review"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="rv-loading">
+          {[1, 2, 3].map((i) => (
+            <ReviewSkeleton key={i} />
+          ))}
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="rv-empty">
+          <EmptyStarIcon />
+          <p>No reviews yet. Be the first to review!</p>
+        </div>
+      ) : (
+        <div className="rv-list">
+          {reviews.map((r) => (
+            <ReviewCard key={r.id} review={r as Review} productId={productId} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+/* ══════════════════════════════════════════════════════
+   Review Card — memoized
+══════════════════════════════════════════════════════ */
+const ReviewCard = memo(function ReviewCard({
+  review,
+  productId,
+}: {
+  review: Review;
+  productId: string;
+}) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [showReplies, setShowReplies] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editComment, setEditComment] = useState(review.comment);
+  const [editRating, setEditRating] = useState(review.rating);
+  const [showReactionPanel, setShowReactionPanel] = useState(false);
+
+  const invalidateInput = useMemo(() => ({ productId }), [productId]);
+
+  const { mutate: addReply, isPending: isReplying } = useAddReplyToReview(invalidateInput);
+  const { mutate: updateReview, isPending: isUpdating } = useUpdateReview(invalidateInput);
+  const { mutate: deleteReview, isPending: isDeleting } = useDeleteReview(invalidateInput);
+  const { mutate: reactToReview } = useReactToReview(invalidateInput);
+
+  const avBg = useMemo(
+    () => AV_COLORS[review.user.name.charCodeAt(0) % AV_COLORS.length],
+    [review.user.name],
+  );
+
+  const initials = useMemo(
+    () =>
+      review.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase(),
+    [review.user.name],
+  );
+
+  const totalReactions = useMemo(
+    () =>
+      review.reactions.like +
+      review.reactions.love +
+      review.reactions.care +
+      review.reactions.haha,
+    [review.reactions],
+  );
+
+  const timeAgo = useCallback((iso: string) => {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return new Date(iso).toLocaleDateString("en-BD", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }, []);
+
+  const handleReply = useCallback(() => {
+    if (!replyText.trim()) return;
+    addReply(
+      { reviewId: review.id, payload: { action: "ADD_REPLY", message: replyText.trim() } },
+      {
+        onSuccess: () => {
+          setReplyText("");
+          setReplyOpen(false);
+          setShowReplies(true);
+        },
+      },
+    );
+  }, [replyText, review.id, addReply]);
+
+  const handleUpdate = useCallback(() => {
+    updateReview(
+      { reviewId: review.id, payload: { rating: editRating, comment: editComment.trim() } },
+      { onSuccess: () => setEditOpen(false) },
+    );
+  }, [review.id, editRating, editComment, updateReview]);
+
+  const handleDelete = useCallback(() => {
+    if (!confirm("Delete this review?")) return;
+    deleteReview(review.id);
+  }, [review.id, deleteReview]);
+
+  const handleReact = useCallback(
+    (type: "like" | "love" | "care" | "haha") => {
+      reactToReview({
+        reviewId: review.id,
+        payload: { action: "REACTION", reactionType: type.toUpperCase() as TReactionType },
+      });
+      setShowReactionPanel(false);
+    },
+    [review.id, reactToReview],
+  );
+
+  const toggleEditOpen = useCallback(() => setEditOpen((v) => !v), []);
+  const toggleReplyOpen = useCallback(() => setReplyOpen((v) => !v), []);
+  const toggleShowReplies = useCallback(() => setShowReplies((v) => !v), []);
+  const toggleReactionPanel = useCallback(() => setShowReactionPanel((v) => !v), []);
+
+  return (
+    <div className="rv-card">
+      <div className="rv-top">
+        <div className="rv-av" style={{ background: avBg }}>
+          {review.user.profileImage ? (
+            <img src={review.user.profileImage} alt="" loading="lazy" decoding="async" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
+        <div className="rv-meta">
+          <div className="rv-meta-row">
+            <span className="rv-name">{review.user.name}</span>
+            <span className="rv-when">{timeAgo(review.createdAt)}</span>
+          </div>
+          <StarsRow rating={review.rating} small />
+        </div>
+        <div className="rv-owner-acts">
+          <button className="rv-icon-btn" title="Edit" onClick={toggleEditOpen}>
+            <PenIcon size={12} />
+          </button>
+          <button
+            className="rv-icon-btn rv-icon-btn--del"
+            title="Delete"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            <TrashIcon />
+          </button>
+        </div>
+      </div>
+
+      {editOpen ? (
+        <div className="rv-edit-form">
+          <div className="rv-star-picker">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                className={`rv-star-btn${n <= editRating ? " rv-star-btn--on" : ""}`}
+                onClick={() => setEditRating(n)}
+              >
+                <StarIcon filled={n <= editRating} />
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="rv-write-ta"
+            rows={2}
+            value={editComment}
+            onChange={(e) => setEditComment(e.target.value)}
+          />
+          <div className="rv-write-btns">
+            <button className="rv-cancel-btn" onClick={() => setEditOpen(false)}>
+              Cancel
+            </button>
+            <button className="rv-send-btn" onClick={handleUpdate} disabled={isUpdating}>
+              {isUpdating ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="rv-txt">{review.comment}</p>
+      )}
+
+      {totalReactions > 0 && (
+        <div className="rv-reaction-summary">
+          {(["like", "love", "care", "haha"] as const)
+            .filter((k) => review.reactions[k] > 0)
+            .map((k) => (
+              <span key={k} className="rv-reaction-chip">
+                {REACTION_EMOJI[k]} {review.reactions[k]}
+              </span>
+            ))}
+        </div>
+      )}
+
+      <div className="rv-acts">
+        <div className="rv-react-wrap">
+          <button className="rv-action-pill" onClick={toggleReactionPanel}>
+            👍 React
+          </button>
+          {showReactionPanel && (
+            <div className="rv-reaction-panel">
+              {(["like", "love", "care", "haha"] as const).map((k) => (
+                <button
+                  key={k}
+                  className="rv-emoji-btn"
+                  onClick={() => handleReact(k)}
+                  title={k}
+                >
+                  {REACTION_EMOJI[k]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button className="rv-action-pill" onClick={toggleReplyOpen}>
+          <ReplyIcon /> Reply
+        </button>
+        {review.replies.length > 0 && (
+          <button
+            className="rv-action-pill rv-action-pill--ghost"
+            onClick={toggleShowReplies}
+          >
+            <BubbleIcon />
+            {showReplies ? "Hide" : `${review.replies.length}`} replies
+          </button>
+        )}
+      </div>
+
+      {replyOpen && (
+        <div className="rv-reply-box">
+          <textarea
+            className="rv-reply-ta"
+            placeholder="Write a reply…"
+            rows={2}
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+          />
+          <div className="rv-reply-row">
+            <button className="rv-cancel-btn" onClick={() => setReplyOpen(false)}>
+              Cancel
+            </button>
+            <button
+              className="rv-send-btn"
+              onClick={handleReply}
+              disabled={isReplying || !replyText.trim()}
+            >
+              {isReplying ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showReplies &&
+        review.replies.map((rep: any) => (
+          <div key={rep.replyId} className="rv-reply-item">
+            <div
+              className="rv-av rv-av--sm"
+              style={{
+                background: AV_COLORS[rep.userName.charCodeAt(0) % AV_COLORS.length],
+              }}
+            >
+              {rep.userImage ? (
+                <img
+                  src={rep.userImage}
+                  alt={rep.userName}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <span>{rep.userName.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="rv-reply-body">
+              <div className="rv-meta-row">
+                <span className="rv-name">{rep.userName}</span>
+                <span className="rv-when">{timeAgo(rep.createdAt)}</span>
+              </div>
+              <p className="rv-txt">{rep.message}</p>
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+});
+
+/* ══════════════════════════════════════════════════════
+   Size Guide Modal
+══════════════════════════════════════════════════════ */
+const SizeGuideModal = memo(function SizeGuideModal({
+  image,
+  data,
+  onClose,
+}: {
+  image: string | null;
+  data: Record<string, string> | null;
+  onClose: () => void;
+}) {
+  return (
+    <div className="sg-bd" onClick={onClose}>
+      <div className="sg-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sg-head">
+          <span className="sg-title">Size Guide</span>
+          <button className="sg-close" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <div className="sg-body">
+          {image && (
+            <img src={image} alt="Size guide" className="sg-img" loading="lazy" decoding="async" />
+          )}
+          {data && (
+            <div style={{ overflowX: "auto" }}>
+              <table className="sg-tbl">
+                <thead>
+                  <tr>
+                    {Object.keys(data).map((k) => (
+                      <th key={k}>{k}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {Object.values(data).map((v, i) => (
+                      <td key={i}>{v}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+              <p className="sg-note">* All measurements in inches</p>
+            </div>
+          )}
+          {!image && !data && (
+            <p
+              style={{
+                color: "#aaa",
+                textAlign: "center",
+                padding: "20px 0",
+                fontSize: "0.86rem",
+              }}
+            >
+              No size guide available.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+/* ══════════════════════════════════════════════════════
+   UI Helpers — all memoized
+══════════════════════════════════════════════════════ */
+const StarsRow = memo(function StarsRow({
+  rating,
+  small,
+}: {
+  rating: number;
+  small?: boolean;
+}) {
+  const s = small ? 12 : 15;
+  return (
+    <div style={{ display: "flex", gap: 1 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg
+          key={i}
+          width={s}
+          height={s}
+          viewBox="0 0 24 24"
+          fill={i <= Math.round(rating) ? "#f5a623" : "none"}
+          stroke="#f5a623"
+          strokeWidth="1.8"
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ))}
+    </div>
+  );
+});
+
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill={filled ? "#f5a623" : "none"}
+      stroke="#f5a623"
+      strokeWidth="1.8"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+function ReviewSkeleton() {
+  return (
+    <div className="rv-skeleton">
+      <div className="rv-sk-av" />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
+        <div className="rv-sk-line" style={{ width: "40%" }} />
+        <div className="rv-sk-line" style={{ width: "80%" }} />
+        <div className="rv-sk-line" style={{ width: "60%" }} />
+      </div>
+    </div>
+  );
+}
+
+function ChevronLeft() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function ChevronRight() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ pointerEvents: "none" }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+function TruckIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <rect x="1" y="3" width="15" height="13" />
+      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
+  );
+}
+
+function RulerIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 12h20M2 12l4-4M2 12l4 4M22 12l-4-4M22 12l-4 4M7 12v2M12 12v3M17 12v2" />
+    </svg>
+  );
+}
+
+function PenIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4h6v2" />
+    </svg>
+  );
+}
+
+function ReplyIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="9 17 4 12 9 7" />
+      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+    </svg>
+  );
+}
+
+function BubbleIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function EmptyStarIcon() {
+  return (
+    <svg
+      width="36"
+      height="36"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#ddd"
+      strokeWidth="1.4"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <>
+      <style>{`@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}.sk{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:sk 1.4s infinite;border-radius:6px}`}</style>
+      <div style={{ background: "#fff" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "48% 1fr" }}>
+          <div className="sk" style={{ aspectRatio: "0.85/1" }} />
+          <div
+            style={{
+              padding: "16px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 11,
+            }}
+          >
+            {[50, 85, 55, 40, 70, 45, 90].map((w, i) => (
+              <div key={i} className="sk" style={{ height: 13, width: `${w}%` }} />
+            ))}
+          </div>
+        </div>
+        <div
+          className="sk"
+          style={{ height: 46, margin: "10px 14px", borderRadius: 10 }}
+        />
+      </div>
+    </>
+  );
+}
