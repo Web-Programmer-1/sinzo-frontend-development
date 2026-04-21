@@ -33,50 +33,31 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* ── Col 2 : Policies ── */}
-          <div className="ft-col">
-            <p className="ft-col-title">Policies</p>
-            <nav className="ft-nav">
-              <Link href="/about" className="ft-link">About Us</Link>
-              <Link href="/privacy-policy" className="ft-link">Privacy Policy</Link>
-              <Link href="/terms" className="ft-link">Terms &amp; Conditions</Link>
-              <Link href="/return-policy" className="ft-link">Return &amp; Cancellation</Link>
-            </nav>
-          </div>
+          {/* ── Policies & Quick Links Wrapper ── */}
+          <div className="ft-links-wrapper">
+            {/* ── Col 2 : Policies ── */}
+            <div className="ft-col">
+              <p className="ft-col-title">Policies</p>
+              <nav className="ft-nav">
+                <Link href="/about" className="ft-link">About Us</Link>
+                <Link href="/privacy-policy" className="ft-link">Privacy Policy</Link>
+                <Link href="/terms" className="ft-link">Terms &amp; Conditions</Link>
+                <Link href="/return-policy" className="ft-link">Return &amp; Cancellation</Link>
+              </nav>
+            </div>
 
-          {/* ── Col 3 : Quick Links ── */}
-          <div className="ft-col">
-            <p className="ft-col-title">Quick Links</p>
-            <nav className="ft-nav">
-              <Link href="/" className="ft-link">Home</Link>
-              <Link href="/products" className="ft-link">All Products</Link>
-              <Link href="/cart" className="ft-link">My Cart</Link>
-              <Link href="/orders" className="ft-link">Track Order</Link>
-            </nav>
-          </div>
-
-          {/* ── Col 4 : Contact ── */}
-          <div className="ft-col">
-            <p className="ft-col-title">Contact Us</p>
-            <div className="ft-contacts">
-              <a href="mailto:sinzo.bd@gmail.com" className="ft-contact-item">
-                <span className="ft-contact-icon"><MailIcon /></span>
-                <span>sinzo.bd@gmail.com</span>
-              </a>
-              <a href="tel:+8801576450711" className="ft-contact-item">
-                <span className="ft-contact-icon"><PhoneIcon /></span>
-                <span>01576450711</span>
-              </a>
-              <div className="ft-contact-item">
-                <span className="ft-contact-icon"><PinIcon /></span>
-                <span>Dhaka Lalbagh, Bangladesh</span>
-              </div>
-              <div className="ft-contact-item">
-                <span className="ft-contact-icon"><ClockIcon /></span>
-                <span>Sat – Thu &nbsp;10am – 9pm</span>
-              </div>
+            {/* ── Col 3 : Quick Links ── */}
+            <div className="ft-col">
+              <p className="ft-col-title">Quick Links</p>
+              <nav className="ft-nav">
+                <Link href="/" className="ft-link">Home</Link>
+                <Link href="/product" className="ft-link">All Products</Link>
+                <Link href="/cart/my-cart" className="ft-link">My Cart</Link>
+                <Link href="/userDashboard/order" className="ft-link">Track Order</Link>
+              </nav>
             </div>
           </div>
+
         </div>
 
         {/* ── Divider ── */}
@@ -119,34 +100,6 @@ function WhatsAppIcon() {
     </svg>
   );
 }
-function MailIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,4 12,13 2,4"/>
-    </svg>
-  );
-}
-function PhoneIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-    </svg>
-  );
-}
-function PinIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-    </svg>
-  );
-}
-function ClockIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-    </svg>
-  );
-}
 
 /* ── Payment badges ── */
 function BkashBadge() {
@@ -186,19 +139,76 @@ const CSS = `
     grid-template-columns: 1.8fr 1fr 1fr 1.4fr;
     gap: 40px 32px;
   }
+  
+  /* Links wrapper for Policies + Quick Links */
+  .ft-links-wrapper {
+    display: contents;
+  }
+  
   @media (max-width: 900px) {
     .ft-inner {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 32px 24px;
     }
-    .ft-brand { grid-column: 1 / -1; }
+    .ft-brand { 
+      grid-column: 1; 
+      text-align: center;
+    }
+    .ft-tagline {
+      max-width: 100%;
+      margin: 0 auto 20px;
+    }
+    .ft-socials {
+      justify-content: center;
+    }
+    
+    /* Policies and Quick Links side by side */
+    .ft-links-wrapper {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      grid-column: 1;
+    }
+    
+    .ft-links-wrapper .ft-col {
+      flex: 1;
+      min-width: 0;
+    }
   }
+  
   @media (max-width: 480px) {
     .ft-inner {
       grid-template-columns: 1fr;
       gap: 28px;
     }
-    .ft-brand { grid-column: 1; }
+    .ft-brand { 
+      grid-column: 1; 
+    }
+    
+    /* Keep them side by side on very small screens */
+    .ft-links-wrapper {
+      display: flex;
+      flex-direction: row;
+      gap: 15px;
+    }
+    
+    .ft-links-wrapper .ft-col {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .ft-col-title {
+      font-size: 0.7rem;
+      margin-bottom: 12px;
+    }
+    
+    .ft-nav {
+      gap: 8px;
+    }
+    
+    .ft-link {
+      font-size: 0.75rem;
+    }
   }
 
   /* brand col */
@@ -270,37 +280,6 @@ const CSS = `
     padding-left: 4px;
   }
 
-  /* contact */
-  .ft-contacts {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .ft-contact-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 0.84rem;
-    color: #888;
-    text-decoration: none;
-    line-height: 1.4;
-    transition: color 0.18s;
-  }
-  a.ft-contact-item:hover { color: #fff; }
-  .ft-contact-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
-    background: #1e1e1e;
-    border: 1px solid #2a2a2a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #aaa;
-    flex-shrink: 0;
-    margin-top: 0;
-  }
-
   /* divider */
   .ft-divider {
     max-width: 1300px;
@@ -353,31 +332,3 @@ const CSS = `
     }
   }
 `;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

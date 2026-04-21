@@ -3,17 +3,11 @@
 import { useState } from "react";
 import { X, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
+import { updateOrderCustomerInfo } from "../../Apis/order";
 
-type TOrder = {
-  id: string;
-  fullName: string;
-  phone: string;
-  email?: string | null;
-  guestId?: string | null;
-};
 
 interface CustomerUpdateModalProps {
-  order: TOrder;
+  order:any; 
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -30,6 +24,8 @@ export default function CustomerUpdateModal({
     fullName: order.fullName || "",
     phone: order.phone || "",
     email: order.email || "",
+    addressLine: order.addressLine || "",
+    deliveryArea: order.deliveryArea || "INSIDE_CITY",
   });
 
   if (!isOpen) return null;
@@ -39,21 +35,15 @@ export default function CustomerUpdateModal({
     setLoading(true);
 
     try {
-      // আপনার API call এখানে দিন
-      // const response = await apiClient.patch(`/orders/${order.id}/customer`, formData);
-      
-      // Example API call:
-      /*
-      await apiClient.patch(`/orders/${order.id}`, {
+
+      await updateOrderCustomerInfo(order.id, {
         fullName: formData.fullName,
         phone: formData.phone,
-        email: formData.email,
+        email: formData.email || undefined,
+        addressLine: formData.addressLine,
+        deliveryArea: formData.deliveryArea,
       });
-      */
 
-      // Simulated success
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
       toast.success("Customer information updated successfully");
       onSuccess();
       onClose();
@@ -65,7 +55,9 @@ export default function CustomerUpdateModal({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -73,13 +65,13 @@ export default function CustomerUpdateModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal Content */}
-      <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -147,6 +139,39 @@ export default function CustomerUpdateModal({
               placeholder="customer@example.com"
             />
             <p className="mt-1 text-xs text-gray-500">Optional for guest orders</p>
+          </div>
+
+          {/* Delivery Area */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">
+              Delivery Area <span className="text-rose-500">*</span>
+            </label>
+            <select
+              name="deliveryArea"
+              value={formData.deliveryArea}
+              onChange={handleChange}
+              required
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-black outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-200 bg-white"
+            >
+              <option value="INSIDE_CITY">Inside City</option>
+              <option value="OUTSIDE_CITY">Outside City</option>
+            </select>
+          </div>
+
+          {/* Address Line */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">
+              Address Line <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              name="addressLine"
+              value={formData.addressLine}
+              onChange={handleChange}
+              required
+              rows={3}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-black outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-200 resize-none"
+              placeholder="Enter complete delivery address"
+            />
           </div>
 
           {/* Guest ID Display */}

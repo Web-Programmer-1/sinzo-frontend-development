@@ -13,6 +13,7 @@ import UpdatePaymentStatusButton from "./UpdatePaymentStatusModal";
 import UpdateOrderStatusButton from "./UpdateOrderStatusModal";
 import DownloadInvoiceButton from "../../helper/DownloadInvoiceButton";
 import CustomerUpdateModal from "./CustomarOrderModal";
+import CopyButton from "../../helper/Copied";
 
 type TOrderItem = {
   id: string;
@@ -156,8 +157,10 @@ const StatCard = ({ title, value, subValue }: { title: string; value: React.Reac
 
 const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
   <div className="flex items-start justify-between gap-4 border-b border-black/5 py-3 last:border-b-0">
-    <p className="min-w-[120px] text-sm font-medium text-gray-500">{label}</p>
-    <div className="text-right text-sm font-semibold text-black break-words">{value || "N/A"}</div>
+    <p className="min-w-[120px] shrink-0 text-sm font-medium text-gray-500">{label}</p>
+    <div className="flex-1 text-right text-sm font-semibold text-black break-all overflow-wrap-anywhere">
+      {value || "N/A"}
+    </div>
   </div>
 );
 
@@ -345,29 +348,19 @@ export default function OrderDetailsView({ id }: { id: string }) {
                 <InfoRow label="Provider" value={order.courierProvider || "N/A"} />
                 <InfoRow label="Courier Status" value={order.courierStatus ? <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${courierClasses[order.courierStatus]}`}>{formatStatus(order.courierStatus)}</span> : "N/A"} />
                 <InfoRow label="Tracking Code" value={order.trackingCode || "N/A"} />
-                <InfoRow label="Consignment ID" value={order.consignmentId || "N/A"} />
+                 <div className="flex flex-1 items-center justify-between gap-2">
+        <div className="text-right text-sm font-semibold text-black break-all">
+          {order.consignmentId || "N/A"}
+        </div>
+        {order.consignmentId && (
+          <CopyButton text={order.consignmentId} label="Consignment ID copied!" />
+        )}
+      </div>
                 <InfoRow label="Courier Sent At" value={formatDateTime(order.courierSentAt || undefined)} />
                 <InfoRow label="Courier Note" value={order.courierNote || "N/A"} />
               </div>
             </div>
-            <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm md:p-6">
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-gray-500">Timeline</p>
-              <h2 className="mt-1 text-xl font-bold text-black">Status History</h2>
-              <div className="mt-5 space-y-4">
-                {order.statusHistory?.length ? order.statusHistory.map((history, index) => (
-                  <div key={history.id} className="flex gap-3">
-                    <div className="flex flex-col items-center"><div className="mt-1 h-3.5 w-3.5 rounded-full bg-black" />{index !== order.statusHistory.length - 1 && <div className="mt-2 h-full w-px bg-black/10" />}</div>
-                    <div className="min-w-0 flex-1 rounded-2xl bg-gray-50 p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses[history.status]}`}>{formatStatus(history.status)}</span>
-                        <span className="text-xs text-gray-500">{formatDateTime(history.createdAt)}</span>
-                      </div>
-                      <p className="mt-2 text-sm font-medium text-black">{history.note || "No note added"}</p>
-                    </div>
-                  </div>
-                )) : <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No status history found.</div>}
-              </div>
-            </div>
+
           </div>
         </div>
       </div>

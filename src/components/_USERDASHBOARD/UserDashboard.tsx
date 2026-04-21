@@ -36,14 +36,7 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
   ),
-  Dashboard: () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  ),
+
   Products: () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -94,11 +87,7 @@ const Icon = {
 
 // ── Nav Config — শুধু এখানে href বদলালেই হবে ─────────────────────────────────
 const NAV_ITEMS: NavItemType[] = [
-  {
-    icon: <Icon.Dashboard />,
-    label: "Dashboard",
-    href: "/userDashboard",
-  },
+
   {
     icon: <Icon.Orders />,
     label: "My Orders",

@@ -373,8 +373,8 @@ const PlaceOrderForm = ({ defaultValues }: PlaceOrderFormProps) => {
                 </div>
                 <div className="space-y-2.5">
                   {[
-                    { value: "INSIDE_CITY", label: "Inside Dhaka", charge: "৳80", desc: "1–2 days" },
-                    { value: "OUTSIDE_CITY", label: "Outside Dhaka", charge: "৳140", desc: "3–5 days" },
+                    { value: "INSIDE_CITY", label: "Inside Dhaka", charge: "৳80", desc: "24 hours" },
+                    { value: "OUTSIDE_CITY", label: "Outside Dhaka", charge: "৳140", desc: "1-3 days" },
                   ].map((opt) => (
                     <label
                       key={opt.value}

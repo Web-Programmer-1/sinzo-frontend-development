@@ -1,7 +1,6 @@
-import CustomerDashboard from "../../../components/_USERDASHBOARD/overview/CustomarDashboardOverview";
 
 export default function CustomarOverviewPage() {
   return (
-    <CustomerDashboard></CustomerDashboard>
+    <h1 className="text-2xl font-bold">Customer Overview</h1>
   )
 }

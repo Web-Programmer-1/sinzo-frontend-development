@@ -8,15 +8,14 @@ interface ProductImageGalleryProps {
   activeIndex: number;
   onImageChange: (index: number) => void;
   productName: string;
-  
-  // ══ NEW: Drag props ══
+
   onMouseDown?: (e: React.MouseEvent) => void;
-  onMouseLeave?: (e: React.MouseEvent) => void;   // ✅ Added (e)
-  onMouseUp?: (e: React.MouseEvent) => void;       // ✅ Added (e)
+  onMouseLeave?: (e: React.MouseEvent) => void;
+  onMouseUp?: (e: React.MouseEvent) => void;
   onMouseMove?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
   onTouchMove?: (e: React.TouchEvent) => void;
-  onTouchEnd?: (e: React.TouchEvent) => void;      // ✅ Added (e)
+  onTouchEnd?: (e: React.TouchEvent) => void;
   galleryRef?: React.RefObject<HTMLDivElement>;
 }
 
@@ -25,8 +24,7 @@ export default function ProductImageGallery({
   activeIndex,
   onImageChange,
   productName,
-  
-  // ══ DESTRUCTURE DRAG PROPS ══
+
   onMouseDown,
   onMouseLeave: onExternalMouseLeave,
   onMouseUp,
@@ -38,8 +36,9 @@ export default function ProductImageGallery({
 }: ProductImageGalleryProps) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [lensPosition, setLensPosition] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDesktop, setIsDesktop] = useState(false);
   const [mobileZoomImage, setMobileZoomImage] = useState<string | null>(null);
 
@@ -47,20 +46,24 @@ export default function ProductImageGallery({
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1024);
     };
-    
+
     checkDesktop();
     window.addEventListener("resize", checkDesktop);
     return () => window.removeEventListener("resize", checkDesktop);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!imageRef.current || !isDesktop || !isZoomed) return;
+    const ref = galleryRef?.current || imageRef.current;
+    if (!ref || !isDesktop || !isZoomed) return;
 
-    const rect = imageRef.current.getBoundingClientRect();
+    const rect = ref.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-    setMousePosition({ x: e.clientX, y: e.clientY });
+    setLensPosition({
+      x: e.clientX - rect.left - 50,
+      y: e.clientY - rect.top - 50,
+    });
     setZoomPosition({ x, y });
   };
 
@@ -89,7 +92,7 @@ export default function ProductImageGallery({
   const showThumbnails = images.length > 1;
 
   return (
-    <div className="gallery-container">
+    <div ref={containerRef} className="gallery-container">
       <style>{`
         .gallery-container {
           display: flex;
@@ -102,6 +105,7 @@ export default function ProductImageGallery({
           display: flex;
           flex-direction: column;
           order: 1;
+          position: relative;
         }
 
         .gallery-thumbnails {
@@ -196,40 +200,44 @@ export default function ProductImageGallery({
 
         .zoom-lens {
           position: absolute;
+          width: 100px;
+          height: 100px;
           border: 2px solid rgba(0, 0, 0, 0.4);
-          background: rgba(255, 255, 255, 0.3);
+          background: rgba(255, 255, 255, 0.25);
           pointer-events: none;
+          z-index: 20;
           display: none;
-          z-index: 10;
         }
 
         .zoom-lens.active {
           display: block;
         }
 
-        .zoom-result {
-          position: fixed;
-          width: 400px;
-          height: 400px;
-          border: 2px solid #ddd;
-          background: #fff;
-          overflow: hidden;
+        .zoom-result-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
           pointer-events: none;
-          z-index: 1000;
+          z-index: 15;
           display: none;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-          border-radius: 8px;
+          overflow: hidden;
+          border-radius: inherit;
         }
 
-        .zoom-result.active {
+        .zoom-result-overlay.active {
           display: block;
         }
 
-        .zoom-result img {
+        .zoom-result-overlay img {
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100%;
           height: 100%;
-          object-fit: cover;
-          pointer-events: none;
+          object-fit: contain;
+          padding: 20px 16px 16px;
         }
 
         .mobile-zoom-modal {
@@ -323,17 +331,6 @@ export default function ProductImageGallery({
           z-index: 10;
         }
 
-        .gallery-image-wrapper {
-  /* existing styles... */
-  cursor: grab;
-  transition: cursor 0.1s;
-}
-
-.gallery-image-wrapper:active,
-.gallery-image-wrapper.dragging {
-  cursor: grabbing !important;
-}
-
         .gallery-dot {
           width: 10px;
           height: 10px;
@@ -388,9 +385,8 @@ export default function ProductImageGallery({
             padding: 24px 18px 18px;
           }
 
-          .zoom-result {
-            width: 450px;
-            height: 450px;
+          .zoom-result-overlay img {
+            padding: 24px 18px 18px;
           }
         }
 
@@ -421,9 +417,8 @@ export default function ProductImageGallery({
             padding: 30px 22px 22px;
           }
 
-          .zoom-result {
-            width: 500px;
-            height: 500px;
+          .zoom-result-overlay img {
+            padding: 30px 22px 22px;
           }
 
           .gallery-nav {
@@ -434,7 +429,7 @@ export default function ProductImageGallery({
 
         @media (max-width: 1023px) {
           .zoom-lens,
-          .zoom-result {
+          .zoom-result-overlay {
             display: none !important;
           }
         }
@@ -479,7 +474,6 @@ export default function ProductImageGallery({
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
-          style={{ cursor: "grab" }}
         >
           <Image
             src={images[activeIndex]}
@@ -495,27 +489,19 @@ export default function ProductImageGallery({
               <div
                 className="zoom-lens active"
                 style={{
-                  left: `${mousePosition.x - (imageRef.current?.getBoundingClientRect().left || 0) - 50}px`,
-                  top: `${mousePosition.y - (imageRef.current?.getBoundingClientRect().top || 0) - 50}px`,
-                  width: "100px",
-                  height: "100px",
+                  left: `${lensPosition.x}px`,
+                  top: `${lensPosition.y}px`,
                 }}
               />
-              <div
-                className="zoom-result active"
-                style={{
-                  left: `${mousePosition.x + 20}px`,
-                  top: `${mousePosition.y - 200}px`,
-                }}
-              >
+              <div className="zoom-result-overlay active">
                 <Image
                   src={images[activeIndex]}
                   alt={`${productName} zoomed`}
-                  width={500}
-                  height={500}
+                  fill
                   style={{
                     transform: `scale(2.5)`,
                     transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    objectFit: "contain",
                   }}
                   unoptimized
                 />
@@ -572,8 +558,8 @@ export default function ProductImageGallery({
 
       {mobileZoomImage && (
         <div className="mobile-zoom-modal" onClick={closeMobileZoom}>
-          <button 
-            className="mobile-zoom-close" 
+          <button
+            className="mobile-zoom-close"
             onClick={closeMobileZoom}
             aria-label="Close zoom"
           >

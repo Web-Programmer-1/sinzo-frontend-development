@@ -1,5 +1,5 @@
 import React from 'react'
-import MyOrders from '../../../../components/_USERDASHBOARD/_Orders/MyOrders'
+import MyOrders from '../../../../components/_USERDASHBOARD/_Orders/MyOrder'
 
 export default function OrderPage() {
   return (
